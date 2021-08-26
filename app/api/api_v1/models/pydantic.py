@@ -143,7 +143,6 @@ C = TypeVar("C", bound="Comment")
 
 
 class PartialComment(BaseModel):
-    edited: datetime = datetime.now()
     content: str
 
     @classmethod
@@ -173,7 +172,6 @@ class PartialComment(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "edited": "2021-08-16T00:00:00Z",
                 "content": default_content,
             }
         }
@@ -181,14 +179,11 @@ class PartialComment(BaseModel):
 
 class Comment(PartialComment):
     user: User
-    added: date
 
     class Config:
         schema_extra = {
             "example": {
                 "user_id": 1,
-                "edited": "2021-08-16T00:00:00Z",
-                "added": "2021-08-16T00:00:00Z",
                 "content": default_content,
             }
         }
