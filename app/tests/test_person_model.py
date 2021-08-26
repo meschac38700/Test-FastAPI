@@ -66,6 +66,22 @@ class TestPersonAPi(test.TestCase):
             person.__class__.__name__, person.first_name, person.last_name
         )
 
+    def test_user_attributes(self):
+        user_attributes = (
+            "id",
+            "is_admin",
+            "first_name",
+            "last_name",
+            "email",
+            "gender",
+            "avatar",
+            "job",
+            "company",
+            "date_of_birth",
+            "country_of_birth",
+        )
+        assert API_functools.get_attributes(Person) == user_attributes
+
     async def test_create_user(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.post(API_ROOT, data=json.dumps(USER_DATA))
@@ -334,14 +350,13 @@ class TestPersonAPi(test.TestCase):
 
         # Invalid attribute
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}filter/id/{person.id}")
+            response = await ac.get(f"{API_ROOT}filter/invalid/{person.id}")
         expected = {
             "success": False,
             "users": [],
             "detail": f"""
             Invalid attribute filter.
-            Try with: {tuple(
-            User.__dict__.get("__fields__", {}).keys())}
+            Try with: {API_functools.get_attributes(Person)}
             """,
         }
         assert response.status_code == status.HTTP_400_BAD_REQUEST
