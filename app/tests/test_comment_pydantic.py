@@ -4,19 +4,10 @@ from pydantic import BaseConfig, Field
 from pydantic.fields import ModelField
 from tortoise.contrib import test
 
-from app.api.utils import API_functools
-from app.api.api_v1.models.pydantic import Comment, PartialComment
+from app.api.api_v1.models.pydantic import Comment
 
 
 class TestComment(test.TestCase):
-    def test_comment_attributes(self):
-        comment_attributes = ("edited", "content")
-        assert (
-            API_functools.get_attributes(PartialComment) == comment_attributes
-        )
-        comment_attributes += ("user", "added")
-        assert API_functools.get_attributes(Comment) == comment_attributes
-
     def test_as_least_1_character(self):
         f = Field(..., min_length=1)
         field = ModelField(
