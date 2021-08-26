@@ -2,11 +2,11 @@ import re
 import concurrent.futures as futures
 from typing import Optional, Dict, Any, Type, TypeVar, List
 
-from pydantic import BaseModel
-from tortoise.models import Model
+from tortoise.models import Model as TortoiseModel
+from tortoise.fields.relational import RelationalField
 
-from .api_v1.models.tortoise import Person, Comment
 from .api_v1.storage.initial_data import INIT_DATA
+from .api_v1.models.tortoise import Person, Comment
 
 ORDERS: Dict[str, str] = {"asc": "", "desc": "-"}
 MODEL = TypeVar("MODEL", bound="API_functools")
@@ -44,7 +44,7 @@ class API_functools:
 
     @classmethod
     def instance_of(
-        cls: Type[MODEL], el: Any, expected_class: Type[Any]
+        cls: Type[MODEL], el: Any, expected_class: Type[Any], **kwargs: dict
     ) -> bool:
         """Check element is from specific class\n
 
@@ -52,32 +52,48 @@ class API_functools:
             cls (API_functools): utility class that used to call this method\n
             el (Any): object from any class\n
             expected_class (Type[U]): class expected\n
+            kwargs (dict): options
+                base (bool): checking base class
 
         Returns:\n
             bool: equality(True if equals else False)
         """
+        if kwargs.get("base", False):
+            return (
+                el.__class__.__base__.__name__.lower()
+                == expected_class.__name__.lower()
+            )
         return el.__class__.__name__.lower() == expected_class.__name__.lower()
 
     @classmethod
     def get_attributes(
-        cls: Type[MODEL], target_cls: BaseModel, **kwargs: dict
+        cls: Type[MODEL], target_cls: TortoiseModel, **kwargs: dict
     ) -> tuple[str]:
         """Return class object attributes except ID\n
 
         Args:\n
-            target (BaseModel): The class
+            target (TortoiseModel): The class
             kwargs (dict): options
                 exclude (list or tuple): attributes to exclude from attributes found
                 replace (dict): attributes to replace, key(old) -> value(new)
                 add (list or tuple): some attributes to add to the attributes found
+                ignore_foreignKey (bool): Not return foreignKey field.
+                    this not includes foreignKey id field, such as: user_id, comment_id
         Returns:
             tuple[str]: attributes
         """
         exclude = kwargs.get("exclude", tuple())  # (attr1, attr2)
         add = kwargs.get("add", tuple())  # (new_attr1, new_attr2)
         replace = kwargs.get("replace", dict())  # {old_attr: new_attr}
-        attributes = tuple(target_cls.__dict__.get("__fields__", {}).keys())
-
+        attributes = tuple(target_cls._meta.fields_map.keys())
+        if kwargs.get("ignore_foreignKey", True):  # Exclude foreignKey
+            exclude += tuple(
+                (
+                    fk
+                    for fk, model in target_cls._meta.fields_map.items()
+                    if cls.instance_of(model, RelationalField, base=True)
+                )
+            )
         for old, new in replace.items():
             attributes = tuple(
                 map(lambda attr: new if attr == old else attr, attributes)
@@ -89,33 +105,25 @@ class API_functools:
             attributes = tuple(
                 filter(lambda attr: attr not in exclude, attributes)
             )
-
         return attributes
 
     @classmethod
     def valid_order(
-        cls: Type[MODEL], target_cls: BaseModel, sort: str, **kwargs: dict
+        cls: Type[MODEL], target_cls: TortoiseModel, sort: str, **kwargs: dict
     ) -> Optional[str]:
         """Validator for sort db query result with \
             attribute:direction(asc or desc)\n
 
         Args:\n
             cls (API_functools): utility class that used to call this method\n
-            target_cls (BaseModel): model for db data\n
+            target_cls (TortoiseModel): model for db data\n
             sort (str): string to valid from http request\n
             kwargs (dict): Options
-                more_attributes (list or tuple): append more attributes to check
-
         Returns:\n
             Optional[str]: valid sql string order by or None
         """
         attr, order = sort.lower().split(":")
-        valid_attributes = ("id",) + cls.get_attributes(
-            target_cls,
-            add=kwargs.get("add", []),
-            exclude=kwargs.get("exclude", []),
-            replace=kwargs.get("replace", {}),
-        )
+        valid_attributes = ("id",) + cls.get_attributes(target_cls, **kwargs)
         if attr in valid_attributes and order in ORDERS.keys():
             return f"{ORDERS.get(order, '')}{attr}"
         return None
@@ -124,14 +132,14 @@ class API_functools:
     def is_attribute_of(
         cls: Type[MODEL],
         attr: str,
-        target_cls: BaseModel,
+        target_cls: TortoiseModel,
     ) -> bool:
         """Check if attr is a target_cls's attribute
            except the ID attribute\n
 
         Args:
             cls (MODEL): utility class that used to call this method\n
-            target_cls (BaseModel): model for db data\n
+            target_cls (TortoiseModel): model for db data\n
             attr (str): attribute to check
 
         Returns:
@@ -223,7 +231,7 @@ class API_functools:
     @classmethod
     async def _insert_default_data(
         cls: Type[MODEL], table: str, _data: dict
-    ) -> Model:
+    ) -> TortoiseModel:
         """Insert data into specific table
             called by insert_default_data function\n
 
@@ -232,7 +240,7 @@ class API_functools:
             _data (dict): data to insert according to table model\n
 
         Returns:\n
-            Model: inserted instance
+            TortoiseModel: inserted instance
         """
         data = {**_data}  # prevent: modify content of argument _data
         # Replace foreign attribute to an instance of foreign model
