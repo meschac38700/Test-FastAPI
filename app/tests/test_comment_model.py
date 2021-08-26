@@ -1,4 +1,4 @@
-# import json
+import json
 from itertools import zip_longest
 
 import concurrent.futures as futures
@@ -62,6 +62,17 @@ class TestPersonAPi(test.TestCase):
         )
         assert comment.__repr__() == expected_repr
         assert comment.__str__() == expected_str
+
+    def test_comment_attributes(self):
+        comment_attributes = (
+            "id",
+            "added",
+            "edited",
+            "content",
+            "user_id",
+        )
+        print("ATTR", API_functools.get_attributes(Comment))
+        assert API_functools.get_attributes(Comment) == comment_attributes
 
     async def test_get_comments(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -186,7 +197,7 @@ class TestPersonAPi(test.TestCase):
         await self.insert_comments(comments, users)
         assert await Comment.all().count() == data_nbr
 
-        # Test order by user id ASC
+        # Test order by content ASC
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT, params={"sort": content_asc})
 
@@ -253,33 +264,37 @@ class TestPersonAPi(test.TestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json() == expected
 
-    # async def test_create_comment(self):
-    #     comment = INIT_DATA.get("comment", [])[0]
-    #     comment.pop("user", None)
-    #     comment["user_id"] = 1
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.post(API_ROOT, data=json.dumps(comment))
+    async def test_create_comment(self):
+        comment = {**INIT_DATA.get("comment", [])[0]}
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.post(API_ROOT, data=json.dumps(comment))
 
-    #     expected = {
-    #         "success": False,
-    #         "comment": {},
-    #         "detail": "Comment owner doesn't exist",
-    #     }
-    #     assert response.status_code == status.HTTP_404_NOT_FOUND
-    #     assert response.json() == expected
+        expected = {
+            "success": False,
+            "comment": {},
+            "detail": "Comment owner doesn't exist",
+        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
 
-    #     comment_owner = await Person.create(**INIT_DATA.get("person", [])[0])
-    #     comment["user_id"] = comment_owner.id
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.post(API_ROOT, data=json.dumps(comment))
+        await Person.create(**INIT_DATA.get("person", [])[0])
 
-    #     expected = {
-    #         "success": True,
-    #         "comment": {"id": 1, **comment},
-    #         "detail": "Comment successfully created",
-    #     }
-    #     assert response.status_code == status.HTTP_201_CREATED
-    #     assert response.json() == expected
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.post(API_ROOT, data=json.dumps(comment))
+
+        actual = response.json()
+        comment["user_id"] = comment.pop("user")
+        expected = {
+            "success": True,
+            "comment": {
+                "id": 1,
+                **comment,
+                "edited": actual["comment"]["edited"],
+            },
+            "detail": "Comment successfully created",
+        }
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json() == expected
 
     async def test_get_comment_by_ID(self):
         comment_ID = 1
