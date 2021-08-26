@@ -153,7 +153,7 @@ async def create_comment(res: Response, comment: dict) -> Dict[str, Any]:
         "detail": "Comment successfully created",
     }
     comment_owner = API_functools.get_or_default(
-        await Person.filter(pk=comment["user"]), 0, None
+        await Person.filter(pk=comment.get("user", 0)), 0, None
     )
 
     if comment_owner is None:
