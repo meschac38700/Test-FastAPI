@@ -38,7 +38,7 @@ async def users(
         "success": False,
         "users": [],
     }
-    order_by = API_functools.valid_order(User, sort)
+    order_by = API_functools.valid_order(Person, sort)
     if order_by is None:
         res.status_code = status.HTTP_400_BAD_REQUEST
         return {
@@ -110,13 +110,13 @@ async def users_by_attribute(
     lower_user_attribute = user_attribute.lower()
     if (
         "and" not in lower_user_attribute and "or" not in lower_user_attribute
-    ) and not API_functools.is_attribute_of(user_attribute, User):
+    ) and not API_functools.is_attribute_of(user_attribute, Person):
         res.status_code = status.HTTP_400_BAD_REQUEST
         return {
             **response,
             "detail": f"""
             Invalid attribute filter.
-            Try with: {API_functools.get_attributes(User)}
+            Try with: {API_functools.get_attributes(Person)}
             """,
         }
     query_builder = Database.query_filter_builder(user_attribute, value)
