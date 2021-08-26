@@ -1,11 +1,10 @@
 from functools import cache
 from typing import Optional, Dict, List, Any
 
-from fastapi import APIRouter, status, Request, Response
 from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, status, Request, Response
 
 from app.api.utils import API_functools
-from app.api.api_v1.models.pydantic import Comment as CommentBaseModel
 from app.api.api_v1.models.tortoise import Comment, Person
 
 
@@ -40,9 +39,7 @@ async def comments(
         "success": False,
         "comments": [],
     }
-    order_by = API_functools.valid_order(
-        CommentBaseModel, sort, replace={"user": "user_id"}
-    )
+    order_by = API_functools.valid_order(Comment, sort)
 
     if order_by is None:
         res.status_code = status.HTTP_400_BAD_REQUEST
@@ -65,13 +62,7 @@ async def comments(
         .limit(limit)
         .offset(offset)
         .order_by(order_by)
-        .values(
-            *API_functools.get_attributes(
-                CommentBaseModel,
-                replace={"user": "user_id"},
-                add=("id",),
-            )
-        )
+        .values(*API_functools.get_attributes(Comment))
     )
 
     if len(comments) == 0:
@@ -96,11 +87,7 @@ async def comments_by_ID(res: Response, comment_ID: int) -> Dict[str, Any]:
 
     comment = jsonable_encoder(
         await Comment.filter(pk=comment_ID).values(
-            *API_functools.get_attributes(
-                CommentBaseModel,
-                replace={"user": "user_id"},
-                add=("id",),
-            )
+            *API_functools.get_attributes(Comment)
         )
     )
     data = {
@@ -139,11 +126,7 @@ async def comments_by_user(res: Response, user_ID: int) -> Dict[str, Any]:
 
     data["comments"] = jsonable_encoder(
         await Comment.filter(user_id=user_ID).values(
-            *API_functools.get_attributes(
-                CommentBaseModel,
-                replace={"user": "user_id"},
-                add=("id",),
-            )
+            *API_functools.get_attributes(Comment)
         )
     )
 
@@ -152,3 +135,38 @@ async def comments_by_user(res: Response, user_ID: int) -> Dict[str, Any]:
         data["success"] = False
         data["detail"] = "Not Found"
     return data
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_comment(res: Response, comment: dict) -> Dict[str, Any]:
+    """Create new comment\n
+
+    Args:\n
+        comment (dict): Comment to create\n
+
+    Returns:\n
+        Dict[str, Any]: Comment created\n
+    """
+    data = {
+        "success": True,
+        "comment": {},
+        "detail": "Comment successfully created",
+    }
+    comment_owner = API_functools.get_or_default(
+        await Person.filter(pk=comment["user"]), 0, None
+    )
+
+    if comment_owner is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        data["success"] = False
+        data["detail"] = "Comment owner doesn't exist"
+        return data
+    comment["user"] = comment_owner
+    comment_created = await Comment.create(**comment)
+    comment_created = {
+        key: value
+        for key, value in comment_created.__dict__.items()
+        if key in API_functools.get_attributes(Comment)
+    }
+    data["comment"] = comment_created
+    return jsonable_encoder(data)
