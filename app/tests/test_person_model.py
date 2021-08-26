@@ -8,7 +8,6 @@ from tortoise.contrib import test
 from main import app
 from app.api.api_v1 import settings
 from app.api.utils import API_functools
-from app.api.api_v1.models.pydantic import User
 from app.api.api_v1.models.tortoise import Person
 from app.api.api_v1.storage.initial_data import INIT_DATA
 
