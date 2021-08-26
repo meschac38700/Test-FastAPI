@@ -4,7 +4,6 @@ from tortoise.contrib import test
 
 from app.api.utils import API_functools
 from app.api.api_v1.storage.initial_data import INIT_DATA
-from app.api.api_v1.models.pydantic import User, PartialUser
 from app.api.api_v1.models.tortoise import Person, Comment, Vote
 
 
@@ -41,20 +40,29 @@ class TestUtils(test.TestCase):
         assert API_functools.instance_of("Hello", int) is False
 
     def test_get_attributes(self):
+        # Test get_attribute with kwargs
         user_attributes = (
-            "first_name",
-            "last_name",
-            "email",
-            "avatar",
-            "company",
-            "job",
+            "id",
             "is_admin",
+            "name",
+            "email",
             "gender",
+            "avatar",
+            "job",
+            "company",
             "date_of_birth",
             "country_of_birth",
+            "full_name",
         )
-        assert API_functools.get_attributes(User) == user_attributes
-        assert API_functools.get_attributes(PartialUser) == user_attributes[:6]
+        assert (
+            API_functools.get_attributes(
+                Person,
+                replace={"first_name": "name"},
+                add=("full_name",),
+                exclude=("last_name",),
+            )
+            == user_attributes
+        )
 
     def test_valid_order(self):
         # valid order must consist of an attribute of the Person class
@@ -66,13 +74,12 @@ class TestUtils(test.TestCase):
             ("id:notvalidkeyword", None),
         ]
         for order in orders:
-            assert API_functools.valid_order(User, order[0]) == order[1]
+            assert API_functools.valid_order(Person, order[0]) == order[1]
 
     def test_is_attribute_of(self):
-        for attr in API_functools.get_attributes(User):
-            assert API_functools.is_attribute_of(attr, User) is True
-        assert API_functools.is_attribute_of("id", User) is False
-        assert API_functools.is_attribute_of("invalid", User) is False
+        for attr in API_functools.get_attributes(Person):
+            assert API_functools.is_attribute_of(attr, Person) is True
+        assert API_functools.is_attribute_of("invalid", Person) is False
 
     def test_manage_next_previous_page(self):
         scope = {"type": "http", "path": "/", "method": "GET"}
