@@ -5,6 +5,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, status, Request, Response
 
 from app.api.utils import API_functools
+from app.api.api_v1.models.pydantic import PartialComment
 from app.api.api_v1.models.tortoise import Comment, Person
 
 
@@ -162,11 +163,37 @@ async def create_comment(res: Response, comment: dict) -> Dict[str, Any]:
         data["detail"] = "Comment owner doesn't exist"
         return data
     comment["user"] = comment_owner
-    comment_created = await Comment.create(**comment)
-    comment_created = {
-        key: value
-        for key, value in comment_created.__dict__.items()
-        if key in API_functools.get_attributes(Comment)
-    }
-    data["comment"] = comment_created
+    data["comment"] = API_functools.tortoise_to_dict(
+        await Comment.create(**comment)
+    )
     return jsonable_encoder(data)
+
+
+@cache
+@router.patch("/{comment_ID}", status_code=status.HTTP_202_ACCEPTED)
+async def fix_comment(
+    res: Response, comment_ID: int, comment_data: PartialComment
+) -> Dict[str, Any]:
+    """Fix some comment attributes according to PartialComment class\n
+
+    Args:\n
+        comment_ID (int): user ID\n
+        comment_data (PartialComment): new data\n
+
+    Returns:\n
+        Dict[str, Any]: contains updated Comment data or error\n
+    """
+    response = {"success": True, "comment": {}}
+
+    comment_found = await Comment.get_or_none(id=comment_ID)
+    if comment_found is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["success"] = False
+        response["detail"] = f"Comment with ID {comment_ID} doesn't exist."
+        return response
+
+    comment_updated = comment_found.update_from_dict(comment_data.__dict__)
+    await comment_updated.save()
+    response["detail"] = "Comment successfully patched"
+    response["comment"] = API_functools.tortoise_to_dict(comment_updated)
+    return jsonable_encoder(response)
