@@ -18,7 +18,7 @@ class API_functools:
         return {
             key: value
             for key, value in instance.__dict__.items()
-            if key in API_functools.get_attributes(Comment)
+            if key in API_functools.get_attributes(instance.__class__)
         }
 
     @classmethod
