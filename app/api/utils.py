@@ -14,6 +14,14 @@ MODEL = TypeVar("MODEL", bound="API_functools")
 
 class API_functools:
     @classmethod
+    def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel):
+        return {
+            key: value
+            for key, value in instance.__dict__.items()
+            if key in API_functools.get_attributes(Comment)
+        }
+
+    @classmethod
     def strip_spaces(cls: Type[MODEL], string: str) -> str:
         """Remove multiple spaces in the given string
 
