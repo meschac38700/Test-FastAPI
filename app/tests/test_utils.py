@@ -1,13 +1,34 @@
 import pytest
 from fastapi import Request
 from tortoise.contrib import test
+from fastapi.encoders import jsonable_encoder
 
 from app.api.utils import API_functools
+from app.api.api_v1.models.pydantic import avatar
 from app.api.api_v1.storage.initial_data import INIT_DATA
 from app.api.api_v1.models.tortoise import Person, Comment, Vote
 
 
 class TestUtils(test.TestCase):
+    async def test_tortoise_to_dict(self):
+        actual = API_functools.tortoise_to_dict(
+            await Person(**INIT_DATA.get("person", [])[0])
+        )
+        actual["date_of_birth"] = jsonable_encoder(actual["date_of_birth"])
+        assert actual == {
+            "avatar": avatar,
+            "company": "Edgetag",
+            "country_of_birth": "Egypt",
+            "date_of_birth": "1978-04-15",
+            "email": "shandes0@un.org",
+            "first_name": "Shalom",
+            "gender": "Male",
+            "id": None,
+            "is_admin": True,
+            "job": "Compensation Analyst",
+            "last_name": "Handes",
+        }
+
     def test_strip_spaces(self):
         s = API_functools.strip_spaces("       Hello         World       ")
         assert s == "Hello World"
