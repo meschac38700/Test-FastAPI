@@ -381,40 +381,50 @@ class TestPersonAPi(test.TestCase):
         assert len(actual["comments"]) == 4
         assert actual == expected
 
-    # async def test_patch_comment(self):
-    #     comment_ID = 1
-    #     comment = INIT_DATA.get("comment", [])[0]
-    #     comment["user_id"] = comment.pop("user", 1)
+    async def test_patch_comment(self):
+        comment_ID = 1
+        comment_to_update = {**INIT_DATA.get("comment", [])[0]}
+        comment_content = {
+            "content": INIT_DATA.get("comment", [])[1]["content"]
+        }
 
-    #     # Comment doesn't exist
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.patch(
-    #             f"{API_ROOT}{comment_ID}", data=json.dumps(comment)
-    #         )
-    #     expected = {
-    #         "success": False,
-    #         "comment": {},
-    #         "detail": f"Comment with ID {comment_ID} doesn't exist.",
-    #     }
-    #     assert response.status_code == status.HTTP_404_NOT_FOUND
-    #     assert response.json() == expected
+        # Comment doesn't exist
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.patch(
+                f"{API_ROOT}{comment_ID}", data=json.dumps(comment_content)
+            )
+        expected = {
+            "success": False,
+            "comment": {},
+            "detail": f"Comment with ID {comment_ID} doesn't exist.",
+        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
 
-    #     # Insert new Comment
-    #     await self.insert_comments([comment], [INIT_DATA.get("person", [])[0]])
+        # Insert new Comment
+        await self.insert_comments(
+            [comment_to_update], [INIT_DATA.get("person", [])[0]]
+        )
 
-    #     # patch comment content
-    #     new_content = {"content": INIT_DATA.get("comment", [])[1]["content"]}
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.patch(
-    #             f"{API_ROOT}{comment_ID}", data=json.dumps(new_content)
-    #         )
+        # patch comment content
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.patch(
+                f"{API_ROOT}{comment_ID}", data=json.dumps(comment_content)
+            )
+        comment_to_update["user_id"] = comment_to_update.pop("user")
+        comment_to_update["id"] = 1
+        actual = response.json()
 
-    #     assert response.status_code == status.HTTP_202_ACCEPTED
-    #     assert response.json() == {
-    #         "success": True,
-    #         "comment": {**comment, "content": new_content},
-    #         "detail": "Comment successfully patched",
-    #     }
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert actual == {
+            "success": True,
+            "comment": {
+                **comment_to_update,
+                "edited": actual["comment"]["edited"],
+                "content": comment_content["content"],
+            },
+            "detail": "Comment successfully patched",
+        }
 
     # async def test_put_comment(self):
     #     # test comment doesn't exist
