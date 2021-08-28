@@ -239,3 +239,29 @@ async def update_comment(
     response["detail"] = "Comment successfully updated"
     response["comment"] = API_functools.tortoise_to_dict(comment_updated)
     return jsonable_encoder(response)
+
+
+@router.delete("/{comment_ID}", status_code=status.HTTP_202_ACCEPTED)
+async def delete_comment(res: Response, comment_ID: int) -> Dict[str, Any]:
+    """Delete a comment\n
+
+    Args:\n
+        comment_ID (int): comment to delete\n
+
+    Returns:\n
+        Dict[str, Any]: contains deleted comment data or error\n
+    """
+    response = {"success": False, "comment": {}}
+
+    comment_found = await Comment.get_or_none(id=comment_ID)
+    if comment_found is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["detail"] = f"Comment with ID {comment_ID} doesn't exist"
+        return response
+
+    await comment_found.delete()
+
+    response["success"] = True
+    response["comment"] = API_functools.tortoise_to_dict(comment_found)
+    response["detail"] = f"Comment {comment_ID} deleted successfully ⭐"
+    return jsonable_encoder(response)
