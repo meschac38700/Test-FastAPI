@@ -204,23 +204,28 @@ class API_functools:
     ) -> None:
         """Init tables with some default fake data\n
 
-        Args:
-            table (str): specific table to manage, Default to None == all
-            data ([dict], optional): data to load. Defaults to INIT_DATA.
-            max_data (int, optional): quantity of data to load. \
-                Defaults to -1.
+        Args:\n
+            table (str): specific table to manage, Default to None == all\n
+            data ([dict], optional): data to load. Defaults to INIT_DATA.\n
+            quantity (int, optional): quantity of data to load. Defaults to -1.\n
         Returns:\n
-            None: nothing
+            None: nothing\n
         """
-        if cls.instance_of(data, list) and table is not None:
+        data = (
+            data[table]
+            if table is not None and cls.instance_of(data, dict)
+            else data
+        )
+
+        if cls.instance_of(data, list):
             data_length = len(data)
             quantity = (
                 quantity if data_length >= quantity >= 1 else data_length
             )
             data = data[:quantity]
             with futures.ProcessPoolExecutor() as executor:
-                for user in data:
-                    executor.map(await cls._insert_default_data(table, user))
+                for obj in data:
+                    executor.map(await cls._insert_default_data(table, obj))
         elif cls.instance_of(data, dict):
             for _table, _data in data.items():
                 data_length = len(_data)
@@ -229,9 +234,9 @@ class API_functools:
                 )
                 c_data = _data[:quantity]
                 with futures.ProcessPoolExecutor() as executor:
-                    for user in c_data:
+                    for obj in c_data:
                         executor.map(
-                            await cls._insert_default_data(_table, user)
+                            await cls._insert_default_data(_table, obj)
                         )
         else:
             raise ValueError("Data must be a list or dict")
