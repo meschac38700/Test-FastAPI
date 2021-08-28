@@ -2,10 +2,11 @@ import re
 from datetime import date
 from typing import Optional, Type, TypeVar
 
+from email_validator import validate_email, EmailNotValidError
+
 from ..models.types import Gender
 from ...utils import API_functools
 from pydantic import BaseModel, validator
-from email_validator import validate_email, EmailNotValidError
 
 avatar = "https://robohash.org/autdoloremaccusamus.png?size=150x150&set=set1"
 default_content = """Lorem ipsum dolor sit amet consectetur adipisicing elit.
@@ -139,7 +140,7 @@ class User(PartialUser):
         }
 
 
-C = TypeVar("C", bound="Comment")
+PC = TypeVar("PC", bound="PartialComment")
 
 
 class PartialComment(BaseModel):
@@ -148,7 +149,7 @@ class PartialComment(BaseModel):
     @classmethod
     @validator("country_of_birth")
     def at_least_1_character(
-        cls: Type[C], value: str, **kwargs
+        cls: Type[PC], value: str, **kwargs
     ) -> Optional[str]:
         """Validate content that must contains minimum 1 character\
 
@@ -177,13 +178,16 @@ class PartialComment(BaseModel):
         }
 
 
+C = TypeVar("C", bound="Comment")
+
+
 class Comment(PartialComment):
-    user: User
+    user: int = 0
 
     class Config:
         schema_extra = {
             "example": {
-                "user_id": 1,
+                "user": 1,
                 "content": default_content,
             }
         }
