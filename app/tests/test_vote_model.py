@@ -177,3 +177,74 @@ class TestPersonAPi(test.TestCase):
         }
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json() == expected
+
+    async def test_votes_sorted_by_attribute(self):
+        # sort by user id ascending order
+        commentID_asc = "comment_id:asc"
+        # sort by date added descending order
+        userID_desc = "user_id:desc"
+        data_nbr = 4
+
+        comments = [*INIT_DATA.get("comment", [])[:data_nbr]]
+        users = INIT_DATA.get("person", [])[:data_nbr]
+        votes = INIT_DATA.get("vote", [])[:data_nbr]
+
+        await self.insert_votes(comments=comments, users=users, votes=votes)
+
+        # Test order by content ASC
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(API_ROOT, params={"sort": commentID_asc})
+
+        actual = response.json()
+        votes = sorted(
+            [
+                {
+                    "comment_id": v["comment"],
+                    "user_id": v["user"],
+                    "id": pk,
+                }
+                for pk, v in enumerate(votes, start=1)
+            ],
+            key=lambda order: order[commentID_asc.split(":")[0]],
+        )
+        expected = {
+            "next": None,
+            "previous": None,
+            "votes": votes,
+        }
+
+        assert response.status_code == status.HTTP_200_OK
+        assert actual == expected
+
+        # Test order by added DESC
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(API_ROOT, params={"sort": userID_desc})
+
+        actual = response.json()
+        votes = sorted(
+            votes,
+            key=lambda u: u[userID_desc.split(":")[0]],
+            reverse=True,
+        )
+        expected = {
+            "next": None,
+            "previous": None,
+            "votes": votes,
+        }
+
+        assert response.status_code == status.HTTP_200_OK
+        assert actual == expected
+
+        # Test bad order by
+        order_by = "undefined:asc"
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(API_ROOT, params={"sort": order_by})
+        detail = "Invalid sort parameters. it must match \
+            attribute:order. ex: id:asc or id:desc"
+        expected = {
+            "success": False,
+            "votes": [],
+            "detail": detail,
+        }
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == expected
