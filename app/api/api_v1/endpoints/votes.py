@@ -175,3 +175,29 @@ async def create_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
     )
 
     return jsonable_encoder(response)
+
+
+@router.delete("/{vote_ID}", status_code=status.HTTP_202_ACCEPTED)
+async def delete_comment(res: Response, vote_ID: int) -> Dict[str, Any]:
+    """Delete a vote\n
+
+    Args:\n
+        vote_ID (int): vote to delete\n
+
+    Returns:\n
+        Dict[str, Any]: contains deleted vote data or error\n
+    """
+    response = {"success": False, "vote": {}}
+
+    vote_found = await Vote.get_or_none(id=vote_ID)
+    if vote_found is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["detail"] = f"Vote with ID {vote_ID} doesn't exist"
+        return response
+
+    await vote_found.delete()
+
+    response["success"] = True
+    response["vote"] = API_functools.tortoise_to_dict(vote_found)
+    response["detail"] = f"Vote {vote_ID} deleted successfully ⭐"
+    return jsonable_encoder(response)
