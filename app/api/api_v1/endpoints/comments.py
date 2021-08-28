@@ -5,7 +5,10 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, status, Request, Response
 
 from app.api.utils import API_functools
-from app.api.api_v1.models.pydantic import PartialComment
+from app.api.api_v1.models.pydantic import (
+    PartialComment,
+    Comment as CommentBaseModel,
+)
 from app.api.api_v1.models.tortoise import Comment, Person
 
 
@@ -195,5 +198,47 @@ async def fix_comment(
     comment_updated = comment_found.update_from_dict(comment_data.__dict__)
     await comment_updated.save()
     response["detail"] = "Comment successfully patched"
+    response["comment"] = API_functools.tortoise_to_dict(comment_updated)
+    return jsonable_encoder(response)
+
+
+@cache
+@router.put("/{comment_ID}", status_code=status.HTTP_202_ACCEPTED)
+async def update_comment(
+    res: Response, comment_ID: int, comment_data: CommentBaseModel
+) -> Dict[str, Any]:
+    """Update comment attributes according to CommentBaseModel class\n
+
+    Args:\n
+        comment_ID (int): comment to update\n
+        comment_data (CommentBaseModel): new comment data\n
+
+    Returns:\n
+        Dict[str, Any]: contains comment new data or error\n
+    """
+    response = {"success": True, "comment": {}}
+
+    new_owner = await Person.get_or_none(id=comment_data.user)
+    if new_owner is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["success"] = False
+        response["detail"] = "Comment owner doesn't exist."
+        return response
+
+    comment_found = await Comment.get_or_none(id=comment_ID)
+    print("________________________________________")
+    print(comment_found, comment_found is None)
+    print("________________________________________")
+    if comment_found is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["success"] = False
+        response["detail"] = f"Comment with ID {comment_ID} doesn't exist."
+        return response
+
+    comment_data.user = new_owner
+
+    comment_updated = comment_found.update_from_dict(comment_data.__dict__)
+    await comment_updated.save()
+    response["detail"] = "Comment successfully updated"
     response["comment"] = API_functools.tortoise_to_dict(comment_updated)
     return jsonable_encoder(response)
