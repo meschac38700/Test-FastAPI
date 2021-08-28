@@ -347,3 +347,41 @@ class TestPersonAPi(test.TestCase):
         }
         assert response.status_code == status.HTTP_201_CREATED
         assert response.json() == expected
+
+    async def test_delete_vote(self):
+        # vote doesn't exist
+        vote_ID = 1
+        vote_to_delete = INIT_DATA.get("vote", [])[0]
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.delete(f"{API_ROOT}{vote_ID}")
+        expected = {
+            "success": False,
+            "vote": {},
+            "detail": f"Vote with ID {vote_ID} doesn't exist",
+        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
+
+        # Insert new vote
+        await self.insert_votes(
+            comments=[INIT_DATA.get("comment", [])[0]],
+            users=[INIT_DATA.get("person", [])[0]],
+            votes=[vote_to_delete],
+        )
+
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.delete(f"{API_ROOT}{vote_ID}")
+
+        actual = response.json()
+        expected = {
+            "success": True,
+            "vote": {
+                "id": vote_ID,
+                "comment_id": vote_to_delete["comment"],
+                "user_id": vote_to_delete["user"],
+            },
+            "detail": f"Vote {vote_ID} deleted successfully ⭐",
+        }
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert actual == expected
+        assert await Vote.filter(id=vote_ID).first() is None
