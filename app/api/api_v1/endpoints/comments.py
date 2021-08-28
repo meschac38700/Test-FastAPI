@@ -15,30 +15,15 @@ from app.api.api_v1.models.tortoise import Comment, Person
 router = APIRouter()
 
 
-@cache
-@router.get("/", status_code=status.HTTP_200_OK)
-async def comments(
-    request: Request,
+async def filter_comments(
+    req: Request,
     res: Response,
-    limit: Optional[int] = 20,
-    offset: Optional[int] = 0,
+    max_comments: int,
+    filters: Optional[dict] = None,
+    offset: Optional[int] = 20,
+    limit: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
-) -> Optional[List[Dict[str, Any]]]:
-
-    """Get all comments or some of them using 'offset' and 'limit'\n
-
-    Args:\n
-        limit (int, optional): max number of returned comments. \
-        Defaults to 100.\n
-        offset (int, optional): first comment to return (use with limit). \
-        Defaults to 1.\n
-        sort (str, optional): the order of the result. \
-        attribute:(asc {ascending} or desc {descending}). \
-        Defaults to "id:asc".\n
-    Returns:\n
-        Optional[List[Dict[str, Any]]]: list of comments found or \
-        Dict with error\n
-    """
+):
     response = {
         "success": False,
         "comments": [],
@@ -59,22 +44,51 @@ async def comments(
             **response,
             "detail": "Invalid values: offset(>=0) or limit(>0)",
         }
-    nb_comments = await Comment.all().count()
 
     comments = jsonable_encoder(
-        await Comment.all()
+        await (Comment.all() if filters is None else Comment.filter(**filters))
         .limit(limit)
         .offset(offset)
         .order_by(order_by)
         .values(*API_functools.get_attributes(Comment))
     )
-
     if len(comments) == 0:
         res.status_code = status.HTTP_404_NOT_FOUND
         return {**response, "detail": "Not Found"}
 
     return API_functools.manage_next_previous_page(
-        request, comments, nb_comments, limit, offset, data_type="comments"
+        req, comments, max_comments, limit, offset, data_type="comments"
+    )
+
+
+@cache
+@router.get("/", status_code=status.HTTP_200_OK)
+async def comments(
+    req: Request,
+    res: Response,
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "id:asc",
+) -> Optional[List[Dict[str, Any]]]:
+
+    """Get all comments or some of them using 'offset' and 'limit'\n
+
+    Args:\n
+        limit (int, optional): max number of returned comments. \
+        Defaults to 100.\n
+        offset (int, optional): first comment to return (use with limit). \
+        Defaults to 1.\n
+        sort (str, optional): the order of the result. \
+        attribute:(asc {ascending} or desc {descending}). \
+        Defaults to "id:asc".\n
+    Returns:\n
+        Optional[List[Dict[str, Any]]]: list of comments found or \
+        Dict with error\n
+    """
+    max_comments = await Comment.all().count()
+
+    return await filter_comments(
+        req, res, max_comments, offset=offset, limit=limit, sort=sort
     )
 
 
@@ -107,38 +121,51 @@ async def comments_by_ID(res: Response, comment_ID: int) -> Dict[str, Any]:
 
 @cache
 @router.get("/user/{user_ID}", status_code=status.HTTP_200_OK)
-async def comments_by_user(res: Response, user_ID: int) -> Dict[str, Any]:
-    """Get comment by ID\n
+async def comments_by_user(
+    req: Request,
+    res: Response,
+    user_ID: int,
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "id:asc",
+) -> Optional[List[Dict[str, Any]]]:
+
+    """Get all user comments or some of them using 'offset' and 'limit'\n
 
     Args:\n
-        comment_ID (int): comment ID\n
+        user_ID (int): user ID
+        limit (int, optional): max number of returned comments. \
+        Defaults to 100.\n
+        offset (int, optional): first comment to return (use with limit). \
+        Defaults to 1.\n
+        sort (str, optional): the order of the result. \
+        attribute:(asc {ascending} or desc {descending}). \
+        Defaults to "id:asc".\n
     Returns:\n
-        Dict[str, Any]: contains comment found\n
+        Optional[List[Dict[str, Any]]]: list of comments found or \
+        Dict with error\n
     """
-    data = {
-        "success": True,
-        "comments": [],
-    }
-
     person = await Person.filter(pk=user_ID).first()
 
     if person is None:
         res.status_code = status.HTTP_404_NOT_FOUND
-        data["success"] = False
-        data["detail"] = "Comment owner doesn't exist"
-        return data
+        return {
+            "success": False,
+            "comments": [],
+            "detail": "Comment owner doesn't exist",
+        }
 
-    data["comments"] = jsonable_encoder(
-        await Comment.filter(user_id=user_ID).values(
-            *API_functools.get_attributes(Comment)
-        )
+    max_comments = await Comment.filter(user_id=user_ID).count()
+
+    return await filter_comments(
+        req,
+        res,
+        max_comments,
+        filters={"user_id": user_ID},
+        offset=offset,
+        limit=limit,
+        sort=sort,
     )
-
-    if len(data["comments"]) == 0:
-        res.status_code = status.HTTP_404_NOT_FOUND
-        data["success"] = False
-        data["detail"] = "Not Found"
-    return data
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
