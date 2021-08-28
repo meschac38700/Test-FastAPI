@@ -194,5 +194,13 @@ class Comment(PartialComment):
 
 
 class Vote(BaseModel):
-    comment: Comment
-    user: User
+    comment: int
+    user: int
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "user": 1,
+                "comment": 1,
+            }
+        }
