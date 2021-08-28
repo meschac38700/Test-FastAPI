@@ -106,3 +106,74 @@ class TestPersonAPi(test.TestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert expected == actual
+
+    async def test_get_votes_with_limit_offset(self):
+        limit = 4
+        offset = 0
+        comments = [*INIT_DATA.get("comment", [])[: limit + 4]]
+        users = INIT_DATA.get("person", [])[: limit + 4]
+        votes = INIT_DATA.get("vote", [])[: limit + 4]
+
+        # insert data
+        await self.insert_votes(comments=comments, users=users, votes=votes)
+
+        # Scene 1 get first data, previous=Null
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(
+                API_ROOT, params={"limit": limit, "offset": offset}
+            )
+        actual = response.json()
+        expected = {
+            "next": f"{API_ROOT}?limit={limit}&offset={limit}",
+            "previous": None,
+            "votes": [
+                {
+                    "id": pk,
+                    "comment_id": vote["comment"],
+                    "user_id": vote["user"],
+                }
+                for pk, vote in enumerate(votes[:limit], start=1)
+            ],
+        }
+
+        assert response.status_code == status.HTTP_200_OK
+        assert actual == expected
+
+        # Scene 2 get last data, next=Null
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(
+                API_ROOT, params={"limit": limit, "offset": limit}
+            )
+        actual = response.json()
+
+        expected = {
+            "next": None,
+            "previous": f"{API_ROOT}?limit={limit}&offset={offset}",
+            "votes": [
+                {
+                    "id": pk + limit,
+                    "comment_id": vote["comment"],
+                    "user_id": vote["user"],
+                }
+                for pk, vote in enumerate(votes[limit:], start=1)
+            ],
+        }
+
+        assert response.status_code == status.HTTP_200_OK
+        assert actual == expected
+
+        limit = 0
+        offset = -1
+        # Test bad limit and offset values
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(
+                API_ROOT, params={"limit": limit, "offset": limit}
+            )
+
+        expected = {
+            "success": False,
+            "votes": [],
+            "detail": "Invalid values: offset(>=0) or limit(>0)",
+        }
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == expected
