@@ -25,9 +25,7 @@ class PartialUser(BaseModel):
 
     @classmethod
     @validator("last_name", "first_name", "job", "company")
-    def between_3_and_50_characters(
-        cls: Type[PU], value: str, **kwargs
-    ) -> str:
+    def between_3_and_50_characters(cls: Type[PU], value: str, **kwargs) -> str:
         """Validate str attributes that must contains minimum 3 characters\
             and maximum 50 characters\n
 
@@ -63,9 +61,7 @@ class PartialUser(BaseModel):
             str: validate attribute
         """
         value = API_functools.strip_spaces(value.title()).lower()
-        pattern = (
-            r"(https?:\/\/(www\.)?|(www\.))([\w\-\_\.]+)(\.[a-z]{2,10})(\/.+)?"
-        )
+        pattern = r"(https?:\/\/(www\.)?|(www\.))([\w\-\_\.]+)(\.[a-z]{2,10})(\/.+)?"
         result = re.match(
             pattern,
             value,
@@ -92,9 +88,7 @@ class PartialUser(BaseModel):
         try:
             validate_email(value)
         except EmailNotValidError:
-            raise ValueError(
-                f"{kwargs['field'].name} is not a valid email address."
-            )
+            raise ValueError(f"{kwargs['field'].name} is not a valid email address.")
         return value.lower()
 
     class Config:
@@ -148,9 +142,7 @@ class PartialComment(BaseModel):
 
     @classmethod
     @validator("country_of_birth")
-    def at_least_1_character(
-        cls: Type[PC], value: str, **kwargs
-    ) -> Optional[str]:
+    def at_least_1_character(cls: Type[PC], value: str, **kwargs) -> Optional[str]:
         """Validate content that must contains minimum 1 character\
 
         Args:\n

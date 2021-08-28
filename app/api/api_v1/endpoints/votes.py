@@ -84,9 +84,7 @@ async def votes(
     """
     nb_votes = await Vote.all().count()
 
-    return await filter_votes(
-        req, res, nb_votes, offset=offset, limit=limit, sort=sort
-    )
+    return await filter_votes(req, res, nb_votes, offset=offset, limit=limit, sort=sort)
 
 
 @cache
@@ -198,9 +196,7 @@ async def create_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
         "vote": {},
         "detail": "Vote successfully created",
     }
-    vote_owner = API_functools.get_or_default(
-        await Person.filter(pk=vote.user), 0, None
-    )
+    vote_owner = API_functools.get_or_default(await Person.filter(pk=vote.user), 0, None)
     if vote_owner is None:
         res.status_code = status.HTTP_404_NOT_FOUND
         response["success"] = False

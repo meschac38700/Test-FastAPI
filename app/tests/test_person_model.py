@@ -122,26 +122,19 @@ class TestPersonAPi(test.TestCase):
         # Insert data
         with futures.ProcessPoolExecutor() as executor:
             for user in users:
-                executor.map(
-                    await API_functools._insert_default_data("person", user)
-                )
+                executor.map(await API_functools._insert_default_data("person", user))
 
         assert await Person.all().count() == len(users)
 
         # Scene 1 get first data, previous=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": offset}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": offset})
 
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
             "previous": None,
             "success": True,
-            "users": [
-                {"id": n, **user}
-                for n, user in enumerate(users[:limit], start=1)
-            ],
+            "users": [{"id": n, **user} for n, user in enumerate(users[:limit], start=1)],
         }
 
         assert response.status_code == status.HTTP_200_OK
@@ -149,16 +142,13 @@ class TestPersonAPi(test.TestCase):
 
         # Scene 2 get last data, next=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": limit}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
         expected = {
             "next": None,
             "previous": f"{API_ROOT}?limit={limit}&offset={offset}",
             "success": True,
             "users": [
-                {"id": n, **user}
-                for n, user in enumerate(users[limit:], start=limit + 1)
+                {"id": n, **user} for n, user in enumerate(users[limit:], start=limit + 1)
             ],
         }
 
@@ -169,9 +159,7 @@ class TestPersonAPi(test.TestCase):
         offset = -1
         # Test bad limit and offset values
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": limit}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
         expected = {
             "success": False,
             "users": [],
@@ -189,9 +177,7 @@ class TestPersonAPi(test.TestCase):
         users = INIT_DATA.get("person", [])[:4]
         with futures.ProcessPoolExecutor() as executor:
             for user in users:
-                executor.map(
-                    await API_functools._insert_default_data("person", user)
-                )
+                executor.map(await API_functools._insert_default_data("person", user))
 
         assert await Person.all().count() == len(users)
 
@@ -248,9 +234,7 @@ class TestPersonAPi(test.TestCase):
         # User doesn't exist
         user_ID = 100
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.patch(
-                f"{API_ROOT}{user_ID}", data=json.dumps(USER_DATA)
-            )
+            response = await ac.patch(f"{API_ROOT}{user_ID}", data=json.dumps(USER_DATA))
         expected = {
             "success": False,
             "user": {},
@@ -269,9 +253,7 @@ class TestPersonAPi(test.TestCase):
         assert person.id == 1
 
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.patch(
-                f"{API_ROOT}{person.id}", data=json.dumps(data)
-            )
+            response = await ac.patch(f"{API_ROOT}{person.id}", data=json.dumps(data))
         user_expected = {
             **person.__dict__,
             **data,

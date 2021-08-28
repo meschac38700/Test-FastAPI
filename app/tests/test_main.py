@@ -28,9 +28,7 @@ class TestPersonAPi(test.TestCase):
         quantity_data = 4
         # load fake data
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                "/data", params={"quantity": quantity_data}
-            )
+            response = await ac.get("/data", params={"quantity": quantity_data})
             assert response.status_code == 201
             assert response.json() == {
                 "success": True,

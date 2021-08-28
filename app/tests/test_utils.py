@@ -40,13 +40,8 @@ class TestUtils(test.TestCase):
             {"name": "Alice Doe"},
         )
         for index, obj in enumerate(list_object):
-            assert (
-                API_functools.get_or_default(list_object, index, None) == obj
-            )
-        assert (
-            API_functools.get_or_default(list_object, len(list_object), None)
-            is None
-        )
+            assert API_functools.get_or_default(list_object, index, None) == obj
+        assert API_functools.get_or_default(list_object, len(list_object), None) is None
 
     async def test_instance_of(self):
         obj = await Person.create(**INIT_DATA.get("person", [])[0])
@@ -166,9 +161,7 @@ class TestUtils(test.TestCase):
     async def test__insert_default_data(self):
         # Insert a Person
         user_to_create = INIT_DATA.get("person", [])[0]
-        user_created = await API_functools._insert_default_data(
-            "person", user_to_create
-        )
+        user_created = await API_functools._insert_default_data("person", user_to_create)
         assert API_functools.instance_of(user_created, Person) is True
 
         # Insert a Comment
@@ -186,7 +179,5 @@ class TestUtils(test.TestCase):
             "user": user_created.id,
             "comment": comment_created.id,
         }
-        vote_created = await API_functools._insert_default_data(
-            "vote", vote_to_create
-        )
+        vote_created = await API_functools._insert_default_data("vote", vote_to_create)
         assert API_functools.instance_of(vote_created, Vote) is True

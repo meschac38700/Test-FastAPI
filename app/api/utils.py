@@ -68,8 +68,7 @@ class API_functools:
         """
         if kwargs.get("base", False):
             return (
-                el.__class__.__base__.__name__.lower()
-                == expected_class.__name__.lower()
+                el.__class__.__base__.__name__.lower() == expected_class.__name__.lower()
             )
         return el.__class__.__name__.lower() == expected_class.__name__.lower()
 
@@ -103,16 +102,12 @@ class API_functools:
                 )
             )
         for old, new in replace.items():
-            attributes = tuple(
-                map(lambda attr: new if attr == old else attr, attributes)
-            )
+            attributes = tuple(map(lambda attr: new if attr == old else attr, attributes))
         if type(add) in (tuple, list):
             for attr in add:
                 attributes += (attr,)
         if type(exclude) in (tuple, list):
-            attributes = tuple(
-                filter(lambda attr: attr not in exclude, attributes)
-            )
+            attributes = tuple(filter(lambda attr: attr not in exclude, attributes))
         return attributes
 
     @classmethod
@@ -190,9 +185,7 @@ class API_functools:
         # manage previous data
         if offset - limit >= 0 and limit <= nb_total_data:
             previous_offset = offset - limit
-            _data[
-                "previous"
-            ] = f"{base}?limit={limit}&offset={previous_offset}"
+            _data["previous"] = f"{base}?limit={limit}&offset={previous_offset}"
         return _data
 
     @classmethod
@@ -211,17 +204,11 @@ class API_functools:
         Returns:\n
             None: nothing\n
         """
-        data = (
-            data[table]
-            if table is not None and cls.instance_of(data, dict)
-            else data
-        )
+        data = data[table] if table is not None and cls.instance_of(data, dict) else data
 
         if cls.instance_of(data, list):
             data_length = len(data)
-            quantity = (
-                quantity if data_length >= quantity >= 1 else data_length
-            )
+            quantity = quantity if data_length >= quantity >= 1 else data_length
             data = data[:quantity]
             with futures.ProcessPoolExecutor() as executor:
                 for obj in data:
@@ -229,15 +216,11 @@ class API_functools:
         elif cls.instance_of(data, dict):
             for _table, _data in data.items():
                 data_length = len(_data)
-                quantity = (
-                    quantity if data_length >= quantity >= 1 else data_length
-                )
+                quantity = quantity if data_length >= quantity >= 1 else data_length
                 c_data = _data[:quantity]
                 with futures.ProcessPoolExecutor() as executor:
                     for obj in c_data:
-                        executor.map(
-                            await cls._insert_default_data(_table, obj)
-                        )
+                        executor.map(await cls._insert_default_data(_table, obj))
         else:
             raise ValueError("Data must be a list or dict")
 

@@ -41,20 +41,12 @@ class TestPersonAPi(test.TestCase):
 
             for comment, user, vote in zip_longest(comments, users, votes):
                 if user:
-                    executor.map(
-                        await API_functools._insert_default_data(
-                            "person", user
-                        )
-                    )
+                    executor.map(await API_functools._insert_default_data("person", user))
                 if comment:
                     executor.map(
-                        await API_functools._insert_default_data(
-                            "comment", comment
-                        )
+                        await API_functools._insert_default_data("comment", comment)
                     )
-                executor.map(
-                    await API_functools._insert_default_data("vote", vote)
-                )
+                executor.map(await API_functools._insert_default_data("vote", vote))
 
     async def test__str__repr__(self):
         user = await Person.create(**INIT_DATA.get("person", [])[0])
@@ -122,9 +114,7 @@ class TestPersonAPi(test.TestCase):
 
         # Scene 1 get first data, previous=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": offset}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": offset})
         actual = response.json()
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
@@ -145,9 +135,7 @@ class TestPersonAPi(test.TestCase):
 
         # Scene 2 get last data, next=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": limit}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
         actual = response.json()
 
         expected = {
@@ -171,9 +159,7 @@ class TestPersonAPi(test.TestCase):
         offset = -1
         # Test bad limit and offset values
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": limit}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
 
         expected = {
             "success": False,
@@ -376,9 +362,7 @@ class TestPersonAPi(test.TestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.json() == expected
 
-        await Comment.create(
-            **{**INIT_DATA.get("comment", [])[0], "user": user}
-        )
+        await Comment.create(**{**INIT_DATA.get("comment", [])[0], "user": user})
 
         # create OK
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
