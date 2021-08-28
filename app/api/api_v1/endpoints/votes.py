@@ -136,6 +136,53 @@ async def votes_by_comment(
     )
 
 
+@cache
+@router.get("/user/{user_ID}", status_code=status.HTTP_200_OK)
+async def votes_by_user(
+    req: Request,
+    res: Response,
+    user_ID: int,
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "id:asc",
+) -> Optional[List[Dict[str, Any]]]:
+
+    """Get all votes of user or some of them using 'offset' and 'limit'\n
+
+    Args:\n
+        user_ID (int): user ID
+        limit (int, optional): max number of votes to return. \
+        Defaults to 100.\n
+        offset (int, optional): first vote to return (use with limit). \
+        Defaults to 1.\n
+        sort (str, optional): the order of the result. \
+        attribute:(asc {ascending} or desc {descending}). \
+        Defaults to "id:asc".\n
+    Returns:\n
+        Optional[List[Dict[str, Any]]]: list of votes found or \
+        Dict with error\n
+    """
+    users = await Person.filter(pk=user_ID)
+
+    if len(users) == 0:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        return {
+            "success": False,
+            "votes": [],
+            "detail": f"User {user_ID} doesn't exist",
+        }
+
+    return await filter_votes(
+        req,
+        res,
+        len(users),
+        filters={"comment_id": user_ID},
+        offset=offset,
+        limit=limit,
+        sort=sort,
+    )
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
     """Create new vote\n
