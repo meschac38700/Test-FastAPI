@@ -253,3 +253,51 @@ class TestPersonAPi(test.TestCase):
         }
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json() == expected
+
+    async def test_votes_by_comment(self):
+        # sort by user id ascending order
+        comment_ID = 1
+        data_nbr = 20
+        comments = [*INIT_DATA.get("comment", [])[:data_nbr]]
+        users = INIT_DATA.get("person", [])[:data_nbr]
+        votes = INIT_DATA.get("vote", [])[:data_nbr]
+
+        await self.insert_votes(comments=comments, users=users, votes=votes)
+
+        # comment doesn't exist
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(f"{API_ROOT}comment/{data_nbr+1}/")
+
+        actual = response.json()
+        expected = {
+            "success": False,
+            "votes": [],
+            "detail": f"Comment {data_nbr+1} doesn't exist",
+        }
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert actual == expected
+
+        # Success
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(f"{API_ROOT}comment/{comment_ID}/")
+
+        actual = response.json()
+        votes = [
+            {
+                "id": pk,
+                "comment_id": v["comment"],
+                "user_id": v["user"],
+            }
+            for pk, v in enumerate(votes, start=1)
+            if v["comment"] == comment_ID
+        ]
+        expected = {
+            "next": None,
+            "previous": None,
+            "success": True,
+            "votes": votes,
+        }
+
+        assert response.status_code == status.HTTP_200_OK
+        assert actual == expected
