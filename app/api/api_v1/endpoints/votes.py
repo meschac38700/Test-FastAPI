@@ -5,7 +5,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, status, Request, Response
 
 from app.api.utils import API_functools
-from app.api.api_v1.models.tortoise import Vote, Comment
+from app.api.api_v1.models.pydantic import Vote as VoteBaseModel
+from app.api.api_v1.models.tortoise import Vote, Comment, Person
 
 
 router = APIRouter()
@@ -133,3 +134,44 @@ async def votes_by_comment(
         limit=limit,
         sort=sort,
     )
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
+    """Create new vote\n
+
+    Args:\n
+        vote (VoteBaseModel): vote to create\n
+
+    Returns:\n
+        Dict[str, Any]: vote created\n
+    """
+    response = {
+        "success": True,
+        "vote": {},
+        "detail": "Vote successfully created",
+    }
+    vote_owner = API_functools.get_or_default(
+        await Person.filter(pk=vote.user), 0, None
+    )
+    if vote_owner is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["success"] = False
+        response["detail"] = "Vote owner doesn't exist"
+        return response
+
+    vote_comment = API_functools.get_or_default(
+        await Comment.filter(pk=vote.comment), 0, None
+    )
+
+    if vote_comment is None:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        response["success"] = False
+        response["detail"] = "Vote comment doesn't exist"
+        return response
+
+    response["vote"] = API_functools.tortoise_to_dict(
+        await Vote.create(comment=vote_comment, user=vote_owner)
+    )
+
+    return jsonable_encoder(response)
