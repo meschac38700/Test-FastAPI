@@ -86,3 +86,50 @@ async def votes(
     return await filter_votes(
         req, res, nb_votes, offset=offset, limit=limit, sort=sort
     )
+
+
+@cache
+@router.get("/comment/{comment_ID}", status_code=status.HTTP_200_OK)
+async def votes_by_comment(
+    req: Request,
+    res: Response,
+    comment_ID: int,
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "id:asc",
+) -> Optional[List[Dict[str, Any]]]:
+
+    """Get all votes of comment or some of them using 'offset' and 'limit'\n
+
+    Args:\n
+        user_ID (int): user ID
+        limit (int, optional): max number of votes to return. \
+        Defaults to 100.\n
+        offset (int, optional): first vote to return (use with limit). \
+        Defaults to 1.\n
+        sort (str, optional): the order of the result. \
+        attribute:(asc {ascending} or desc {descending}). \
+        Defaults to "id:asc".\n
+    Returns:\n
+        Optional[List[Dict[str, Any]]]: list of votes found or \
+        Dict with error\n
+    """
+    comment = await Comment.filter(pk=comment_ID)
+
+    if len(comment) == 0:
+        res.status_code = status.HTTP_404_NOT_FOUND
+        return {
+            "success": False,
+            "votes": [],
+            "detail": f"Comment {comment_ID} doesn't exist",
+        }
+
+    return await filter_votes(
+        req,
+        res,
+        len(comment),
+        filters={"comment_id": comment_ID},
+        offset=offset,
+        limit=limit,
+        sort=sort,
+    )
