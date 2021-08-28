@@ -490,33 +490,43 @@ class TestPersonAPi(test.TestCase):
         assert response.status_code == status.HTTP_202_ACCEPTED
         assert actual == expected
 
-    # async def test_delete_user(self):
+    async def test_delete_comment(self):
 
-    #     # Comment doesn't exist
-    #     comment_ID = 1
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.delete(f"{API_ROOT}{comment_ID}")
-    #     expected = {
-    #         "success": False,
-    #         "user": {},
-    #         "detail": f"Comment with ID {comment_ID} doesn't exist",
-    #     }
-    #     assert response.status_code == status.HTTP_404_NOT_FOUND
-    #     assert response.json() == expected
+        # Comment doesn't exist
+        comment_ID = 1
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.delete(f"{API_ROOT}{comment_ID}")
+        expected = {
+            "success": False,
+            "comment": {},
+            "detail": f"Comment with ID {comment_ID} doesn't exist",
+        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
 
-    #     # Insert new Comment
-    #     self.insert_comments(
-    #         [INIT_DATA.get("comment", [])[0]], [INIT_DATA.get("person", [])[0]]
-    #     )
+        # Insert new Comment
+        comment_to_delete = {**INIT_DATA.get("comment", [])[0]}
+        await self.insert_comments(
+            [comment_to_delete], [INIT_DATA.get("person", [])[0]]
+        )
 
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.delete(f"{API_ROOT}{comment_ID}")
-    #     expected = {
-    #         "success": True,
-    #         "user": {**INIT_DATA.get("comment", [])[0], "id": comment_ID},
-    #         "detail": f"Comment {comment_ID} delete successfully ⭐",
-    #     }
-    #     deleted_comment = await Comment.filter(id=comment_ID).first()
-    #     assert response.status_code == status.HTTP_202_ACCEPTED
-    #     assert response.json() == expected
-    #     assert None is deleted_comment
+        assert await Comment.all().count() == 1
+
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.delete(f"{API_ROOT}{comment_ID}")
+
+        comment_to_delete["user_id"] = comment_to_delete.pop("user", 1)
+
+        actual = response.json()
+        expected = {
+            "success": True,
+            "comment": {
+                **comment_to_delete,
+                "edited": actual["comment"]["edited"],
+                "id": comment_ID,
+            },
+            "detail": f"Comment {comment_ID} deleted successfully ⭐",
+        }
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert actual == expected
+        assert await Comment.filter(id=comment_ID).first() is None
