@@ -226,9 +226,6 @@ async def update_comment(
         return response
 
     comment_found = await Comment.get_or_none(id=comment_ID)
-    print("________________________________________")
-    print(comment_found, comment_found is None)
-    print("________________________________________")
     if comment_found is None:
         res.status_code = status.HTTP_404_NOT_FOUND
         response["success"] = False
