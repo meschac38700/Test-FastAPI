@@ -1,3 +1,5 @@
+import json
+
 from itertools import zip_longest
 import concurrent.futures as futures
 
@@ -301,3 +303,47 @@ class TestPersonAPi(test.TestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert actual == expected
+
+    async def test_create_vote(self):
+
+        vote = INIT_DATA.get("vote", [])[0]
+
+        # User doesn't exist
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.post(API_ROOT, data=json.dumps(vote))
+        expected = {
+            "success": False,
+            "vote": {},
+            "detail": "Vote owner doesn't exist",
+        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
+
+        user = await Person.create(**INIT_DATA.get("person", [])[0])
+
+        # Comment doesn't exist
+        expected["detail"] = "Vote comment doesn't exist"
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.post(API_ROOT, data=json.dumps(vote))
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
+
+        await Comment.create(
+            **{**INIT_DATA.get("comment", [])[0], "user": user}
+        )
+
+        # create OK
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.post(API_ROOT, data=json.dumps(vote))
+
+        expected = {
+            "success": True,
+            "vote": {
+                "id": 1,
+                "comment_id": vote["comment"],
+                "user_id": vote["user"],
+            },
+            "detail": "Vote successfully created",
+        }
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json() == expected
