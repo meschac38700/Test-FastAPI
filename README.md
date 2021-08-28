@@ -8,9 +8,10 @@
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![CC-0 license](https://img.shields.io/badge/License-CC--0-blue.svg)](https://github.com/meschac38700/Test-FastAPI/blob/master/LICENSE)
 
-## Client code
+## Client apps
 
-[Client App](https://github.com/meschac38700/fastAPI-client-side)
+- [App-1](https://github.com/meschac38700/fastAPI-client-side)
+- [App-2](https://github.com/meschac38700/comment-design)
 
 ## Python versions
 
@@ -34,7 +35,7 @@ if you don't want to install requirements in your host machine
 For that run the following commands
 
 ```bash
-python -m venv {choose-name}
+python -m venv {venv-name}
 ```
 
 activate this virtual environment
@@ -42,13 +43,13 @@ activate this virtual environment
 Linux or Mac
 
 ```bash
-source {choose-name}/bin/activate
+source {venv-name}/bin/activate
 ```
 
 Windows
 
 ```bash
-./{choose-name}/Scripts/activate
+./{venv-name}/Scripts/activate
 ```
 
 ### Install requirements
@@ -88,7 +89,7 @@ CREATE DATABASE fastapidb;
 Then Edit `TORTOISE_ORM` variable in the `settings.py` correctly.
 You will find settings file in `app/api/api_v1` folder
 
-Then run migrations using `aerich` command to create table(s).
+Then run migrations using following `aerich` commands:
 
 ```bash
 aerich init -t app.api.api_v1.settings.TORTOISE_ORM
@@ -109,11 +110,11 @@ The app running on http://127.0.0.1:8000/
 ## Fake Data
 
 To load some fake data, go to http://127.0.0.1:8000/data
-which will load fake data and redirect you to the app root `/`
+which will load fake data.
 
 ## Run all the tests
 
-from root folder run (Test-FastAPI):
+from root folder`(Test-FastAPI/)` run:
 
 ```bash
 pytest
