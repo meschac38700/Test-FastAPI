@@ -6,11 +6,10 @@ from httpx import AsyncClient
 from tortoise.contrib import test
 
 from main import app
-from api.api_v1 import settings
-from api.utils import API_functools
-from api.api_v1.models.pydantic import User
-from api.api_v1.models.tortoise import Person
-from api.api_v1.storage.initial_data import INIT_DATA
+from app.api.api_v1 import settings
+from app.api.utils import API_functools
+from app.api.api_v1.models.tortoise import Person
+from app.api.api_v1.storage.initial_data import INIT_DATA
 
 TORTOISE_TEST_DB = getattr(settings, "TORTOISE_TEST_DB", "sqlite://:memory:")
 BASE_URL = "http://127.0.0.1:8000"
@@ -66,17 +65,21 @@ class TestPersonAPi(test.TestCase):
             person.__class__.__name__, person.first_name, person.last_name
         )
 
-    async def test_root(self):
-        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get("/")
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json() == {
-            "detail": "Welcome to FastAPI",
-            "apis": ["/api/v1/users"],
-            "fake_data": "/data",
-            "docs": ["/docs", "/redoc"],
-            "openapi": "/openapi.json",
-        }
+    def test_user_attributes(self):
+        user_attributes = (
+            "id",
+            "is_admin",
+            "first_name",
+            "last_name",
+            "email",
+            "gender",
+            "avatar",
+            "job",
+            "company",
+            "date_of_birth",
+            "country_of_birth",
+        )
+        assert API_functools.get_attributes(Person) == user_attributes
 
     async def test_create_user(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -84,25 +87,6 @@ class TestPersonAPi(test.TestCase):
 
         expected = {"id": 1, **USER_DATA}
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json() == expected
-
-    async def test_loading_data(self):
-        quantity_users = 4
-        # load fake data
-        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get("/data", params={"quantity": quantity_users})
-
-        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(API_ROOT)
-        expected = {
-            "next": None,
-            "previous": None,
-            "users": [
-                {"id": pk, **user}
-                for pk, user in enumerate(INIT_DATA[:quantity_users], start=1)
-            ],
-        }
-        assert response.status_code == status.HTTP_200_OK
         assert response.json() == expected
 
     async def test_get_users(self):
@@ -121,6 +105,7 @@ class TestPersonAPi(test.TestCase):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT)
         expected = {
+            "success": True,
             "next": None,
             "previous": None,
             "users": [{"id": person.id, **USER_DATA}],
@@ -129,26 +114,34 @@ class TestPersonAPi(test.TestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == expected
 
-    async def test_limit_offset(self):
+    async def test_get_users_with_limit_offset(self):
         limit = 5
         offset = 0
-        users = INIT_DATA[:10]
+        users = INIT_DATA.get("person", [])[:10]
 
         # Insert data
         with futures.ProcessPoolExecutor() as executor:
             for user in users:
-                executor.map(await API_functools._create_default_person(user))
+                executor.map(
+                    await API_functools._insert_default_data("person", user)
+                )
 
         assert await Person.all().count() == len(users)
 
         # Scene 1 get first data, previous=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(API_ROOT, params={"limit": limit, "offset": offset})
+            response = await ac.get(
+                API_ROOT, params={"limit": limit, "offset": offset}
+            )
 
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
             "previous": None,
-            "users": [{"id": n, **user} for n, user in enumerate(users[:limit], start=1)],
+            "success": True,
+            "users": [
+                {"id": n, **user}
+                for n, user in enumerate(users[:limit], start=1)
+            ],
         }
 
         assert response.status_code == status.HTTP_200_OK
@@ -156,12 +149,16 @@ class TestPersonAPi(test.TestCase):
 
         # Scene 2 get last data, next=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
+            response = await ac.get(
+                API_ROOT, params={"limit": limit, "offset": limit}
+            )
         expected = {
             "next": None,
             "previous": f"{API_ROOT}?limit={limit}&offset={offset}",
+            "success": True,
             "users": [
-                {"id": n, **user} for n, user in enumerate(users[limit:], start=limit + 1)
+                {"id": n, **user}
+                for n, user in enumerate(users[limit:], start=limit + 1)
             ],
         }
 
@@ -172,7 +169,9 @@ class TestPersonAPi(test.TestCase):
         offset = -1
         # Test bad limit and offset values
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
+            response = await ac.get(
+                API_ROOT, params={"limit": limit, "offset": limit}
+            )
         expected = {
             "success": False,
             "users": [],
@@ -181,16 +180,18 @@ class TestPersonAPi(test.TestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json() == expected
 
-    async def test_sorted_by_attribute(self):
+    async def test_users_sorted_by_attribute(self):
         # sort by first_name ascending order
         asc = "first_name:asc"
         # sort by first_name descending order
         desc = "first_name:desc"
 
-        users = INIT_DATA[:4]
+        users = INIT_DATA.get("person", [])[:4]
         with futures.ProcessPoolExecutor() as executor:
             for user in users:
-                executor.map(await API_functools._create_default_person(user))
+                executor.map(
+                    await API_functools._insert_default_data("person", user)
+                )
 
         assert await Person.all().count() == len(users)
 
@@ -201,6 +202,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "users": sorted(
                 [{"id": n, **user} for n, user in enumerate(users, start=1)],
                 key=lambda u: u[asc.split(":")[0]],
@@ -216,6 +218,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "users": sorted(
                 [{"id": n, **user} for n, user in enumerate(users, start=1)],
                 key=lambda u: u[desc.split(":")[0]],
@@ -245,7 +248,9 @@ class TestPersonAPi(test.TestCase):
         # User doesn't exist
         user_ID = 100
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.patch(f"{API_ROOT}{user_ID}", data=json.dumps(USER_DATA))
+            response = await ac.patch(
+                f"{API_ROOT}{user_ID}", data=json.dumps(USER_DATA)
+            )
         expected = {
             "success": False,
             "user": {},
@@ -264,7 +269,9 @@ class TestPersonAPi(test.TestCase):
         assert person.id == 1
 
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.patch(f"{API_ROOT}{person.id}", data=json.dumps(data))
+            response = await ac.patch(
+                f"{API_ROOT}{person.id}", data=json.dumps(data)
+            )
         user_expected = {
             **person.__dict__,
             **data,
@@ -347,14 +354,13 @@ class TestPersonAPi(test.TestCase):
 
         # Invalid attribute
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}filter/id/{person.id}")
+            response = await ac.get(f"{API_ROOT}filter/invalid/{person.id}")
         expected = {
             "success": False,
             "users": [],
             "detail": f"""
             Invalid attribute filter.
-            Try with: {tuple(
-            User.__dict__.get("__fields__", {}).keys())}
+            Try with: {API_functools.get_attributes(Person)}
             """,
         }
         assert response.status_code == status.HTTP_400_BAD_REQUEST

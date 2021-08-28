@@ -1,7 +1,7 @@
 from tortoise import models, fields
 from tortoise.contrib.pydantic import pydantic_model_creator
 
-from api.api_v1.models.types import Gender
+from .types import Gender
 
 
 class Person(models.Model):
@@ -28,5 +28,44 @@ class Person(models.Model):
 
 
 Person_Pydantic = pydantic_model_creator(Person, name="Person")
-# PersonIn_Pydantic = pydantic_model_creator(
-#     Person, name="PersonIn", exclude_readonly=True)
+
+
+class Comment(models.Model):
+    user = fields.ForeignKeyField("models.Person", related_name="comment")
+    added = fields.DatetimeField(auto_now_add=True)
+    edited = fields.DatetimeField(auto_now=True)
+    content = fields.TextField()
+
+    def __str__(self):
+        return "{!s}({!s})".format(self.__class__.__name__, self.content[:10])
+
+    def __repr__(self):
+        return "Class({!r})[{!r}]".format(
+            self.__class__.__name__,
+            self.content[:10],
+        )
+
+
+Comment_Pydantic = pydantic_model_creator(Comment, name="Comment")
+
+
+class Vote(models.Model):
+    comment = fields.ForeignKeyField("models.Comment", related_name="vote")
+    user = fields.ForeignKeyField("models.Person", related_name="vote")
+
+    def __str__(self):
+        return "{!s}(User={!s}, Comment={!s},...)".format(
+            self.__class__.__name__,
+            self.user.first_name,
+            self.comment.content[:10],
+        )
+
+    def __repr__(self):
+        return "Class({!r})(User={!r}, Comment={!r},...)".format(
+            self.__class__.__name__,
+            self.user.first_name,
+            self.comment.content[:10],
+        )
+
+
+Vote_Pydantic = pydantic_model_creator(Vote, name="Vote")

@@ -4,36 +4,14 @@ from pydantic import BaseConfig, Field
 from pydantic.fields import ModelField
 from tortoise.contrib import test
 
-from api.api_v1.models.pydantic import User, PartialUser
+from app.api.api_v1.models.pydantic import PartialUser
 
-url_regex = r"(https?:\/\/(www\.)?|(www\.))([\w\-\_\.]+)(\.[a-z]{2,10})(\/[^\s,%]+)?"
+url_regex = (
+    r"(https?:\/\/(www\.)?|(www\.))([\w\-\_\.]+)(\.[a-z]{2,10})(\/[^\s,%]+)?"
+)
 
 
 class TestPydantic(test.TestCase):
-    def test_user_attributes(self):
-        user_attributes = (
-            "first_name",
-            "last_name",
-            "email",
-            "avatar",
-            "company",
-            "job",
-            "is_admin",
-            "gender",
-            "date_of_birth",
-            "country_of_birth",
-        )
-        assert User.attributes() == user_attributes
-        partialUser_attributes = (
-            "first_name",
-            "last_name",
-            "email",
-            "avatar",
-            "company",
-            "job",
-        )
-        assert PartialUser.attributes() == partialUser_attributes
-
     def test_between_3_and_50_characters(self):
         f = Field(..., min_length=3, max_length=50)
         field = ModelField(

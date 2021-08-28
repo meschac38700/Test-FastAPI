@@ -3,10 +3,10 @@ from typing import Optional, Dict, List, Any
 
 from fastapi import APIRouter, Request, Response, status
 
-from api.api_v1.storage.database import Database
-from api.utils import API_functools
-from api.api_v1.models.pydantic import User, PartialUser
-from api.api_v1.models.tortoise import Person, Person_Pydantic
+from app.api.api_v1.storage.database import Database
+from app.api.utils import API_functools
+from app.api.api_v1.models.pydantic import User, PartialUser
+from app.api.api_v1.models.tortoise import Person, Person_Pydantic
 
 router = APIRouter()
 
@@ -38,7 +38,7 @@ async def users(
         "success": False,
         "users": [],
     }
-    order_by = API_functools.valid_order(User, sort)
+    order_by = API_functools.valid_order(Person, sort)
     if order_by is None:
         res.status_code = status.HTTP_400_BAD_REQUEST
         return {
@@ -110,13 +110,13 @@ async def users_by_attribute(
     lower_user_attribute = user_attribute.lower()
     if (
         "and" not in lower_user_attribute and "or" not in lower_user_attribute
-    ) and not API_functools.is_attribute_of(user_attribute, User):
+    ) and not API_functools.is_attribute_of(user_attribute, Person):
         res.status_code = status.HTTP_400_BAD_REQUEST
         return {
             **response,
             "detail": f"""
             Invalid attribute filter.
-            Try with: {User.attributes()}
+            Try with: {API_functools.get_attributes(Person)}
             """,
         }
     query_builder = Database.query_filter_builder(user_attribute, value)
@@ -131,7 +131,9 @@ async def users_by_attribute(
     return {"success": True, "users": persons}
 
 
-@router.post("/", response_model=Person_Pydantic, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=Person_Pydantic, status_code=status.HTTP_201_CREATED
+)
 async def create_user(user: User) -> Dict[str, Any]:
     """Create new user\n
 
@@ -147,7 +149,9 @@ async def create_user(user: User) -> Dict[str, Any]:
 
 @cache
 @router.patch("/{user_ID}", status_code=status.HTTP_202_ACCEPTED)
-async def fix_user(res: Response, user_ID: int, user: PartialUser) -> Dict[str, Any]:
+async def fix_user(
+    res: Response, user_ID: int, user: PartialUser
+) -> Dict[str, Any]:
     """Fix some user attributes according to PartialUser class\n
 
     Args:\n
@@ -171,14 +175,18 @@ async def fix_user(res: Response, user_ID: int, user: PartialUser) -> Dict[str, 
         response["detail"] = f"User with ID {user_ID} doesn't exist."
         return response
 
-    user_updated = user_found.update_from_dict({**user.__dict__, "id": user_found.id})
+    user_updated = user_found.update_from_dict(
+        {**user.__dict__, "id": user_found.id}
+    )
     await user_updated.save()
     return await Person_Pydantic.from_tortoise_orm(user_updated)
 
 
 @cache
 @router.put("/{user_ID}", status_code=status.HTTP_202_ACCEPTED)
-async def update_user(res: Response, user_ID: int, new_data: User) -> Dict[str, Any]:
+async def update_user(
+    res: Response, user_ID: int, new_data: User
+) -> Dict[str, Any]:
     """Update user attributes according to User class\n
 
     Args:\n

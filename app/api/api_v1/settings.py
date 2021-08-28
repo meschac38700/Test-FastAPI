@@ -1,7 +1,7 @@
 import os
 
 
-TORTOISE_TEST_DB = "sqlite://tests/test-{}.sqlite3"
+TORTOISE_TEST_DB = "sqlite://app/tests/test-{}.sqlite3"
 TORTOISE_ORM = {
     "connections": {
         "default": {
@@ -17,11 +17,11 @@ TORTOISE_ORM = {
         }
     },
     "apps": {
-        "app": {
-            "models": ["api.api_v1.models.tortoise", "aerich.models"],
+        "models": {
+            "models": ["app.api.api_v1.models.tortoise", "aerich.models"],
             # If no default_connection specified, defaults to 'default'
             "default_connection": "default",
-        }
+        },
     },
 }
 
