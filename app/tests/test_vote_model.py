@@ -94,6 +94,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "votes": [
                 {
                     "id": pk,
@@ -126,6 +127,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
             "previous": None,
+            "success": True,
             "votes": [
                 {
                     "id": pk,
@@ -147,6 +149,7 @@ class TestPersonAPi(test.TestCase):
         actual = response.json()
 
         expected = {
+            "success": True,
             "next": None,
             "previous": f"{API_ROOT}?limit={limit}&offset={offset}",
             "votes": [
@@ -210,6 +213,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "votes": votes,
         }
 
@@ -229,6 +233,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "votes": votes,
         }
 

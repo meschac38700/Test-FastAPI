@@ -105,6 +105,7 @@ class TestPersonAPi(test.TestCase):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT)
         expected = {
+            "success": True,
             "next": None,
             "previous": None,
             "users": [{"id": person.id, **USER_DATA}],
@@ -136,6 +137,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
             "previous": None,
+            "success": True,
             "users": [
                 {"id": n, **user}
                 for n, user in enumerate(users[:limit], start=1)
@@ -153,6 +155,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": f"{API_ROOT}?limit={limit}&offset={offset}",
+            "success": True,
             "users": [
                 {"id": n, **user}
                 for n, user in enumerate(users[limit:], start=limit + 1)
@@ -199,6 +202,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "users": sorted(
                 [{"id": n, **user} for n, user in enumerate(users, start=1)],
                 key=lambda u: u[asc.split(":")[0]],
@@ -214,6 +218,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "users": sorted(
                 [{"id": n, **user} for n, user in enumerate(users, start=1)],
                 key=lambda u: u[desc.split(":")[0]],

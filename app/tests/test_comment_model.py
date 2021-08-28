@@ -94,6 +94,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "comments": [
                 {
                     "id": 1,
@@ -127,6 +128,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
             "previous": None,
+            "success": True,
             "comments": [
                 {
                     "id": n,
@@ -152,6 +154,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": f"{API_ROOT}?limit={limit}&offset={offset}",
+            "success": True,
             "comments": [
                 {
                     "id": n + limit + 1,
@@ -208,6 +211,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "comments": [
                 {
                     "id": actual["comments"][n]["id"],
@@ -234,6 +238,7 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "next": None,
             "previous": None,
+            "success": True,
             "comments": [
                 {
                     "id": actual["comments"][n]["id"],
@@ -374,7 +379,12 @@ class TestPersonAPi(test.TestCase):
             }
             for pk, cm in enumerate(comments, start=1)
         ]
-        expected = {"success": True, "comments": expected_comments}
+        expected = {
+            "next": None,
+            "previous": None,
+            "success": True,
+            "comments": expected_comments,
+        }
 
         assert response.status_code == status.HTTP_200_OK
         assert len(actual["comments"]) == 4
