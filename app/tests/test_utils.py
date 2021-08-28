@@ -108,13 +108,19 @@ class TestUtils(test.TestCase):
         scenes = [
             {
                 "data": (0, 5, 0),  # nb_total_data, limit, offset
-                "expected": {"next": None, "previous": None, "users": []},
+                "expected": {
+                    "next": None,
+                    "previous": None,
+                    "success": False,
+                    "users": [],
+                },
             },
             {
                 "data": (15, 5, 5),
                 "expected": {
                     "next": "/?limit=5&offset=10",
                     "previous": "/?limit=5&offset=0",
+                    "success": False,
                     "users": [],
                 },
             },
@@ -123,6 +129,7 @@ class TestUtils(test.TestCase):
                 "expected": {
                     "next": "/?limit=5&offset=5",
                     "previous": None,
+                    "success": False,
                     "users": [],
                 },
             },
@@ -131,6 +138,7 @@ class TestUtils(test.TestCase):
                 "expected": {
                     "next": None,
                     "previous": "/?limit=5&offset=0",
+                    "success": False,
                     "users": [],
                 },
             },

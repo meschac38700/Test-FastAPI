@@ -178,7 +178,7 @@ class API_functools:
         Returns:
             Dict[str, Any]: response
         """
-        _data = {"next": None, "previous": None}
+        _data = {"success": len(data) > 0, "next": None, "previous": None}
         _data[data_type] = data
 
         # manage next data
