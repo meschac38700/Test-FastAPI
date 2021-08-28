@@ -12,9 +12,12 @@ WORKDIR /src/app
 
 COPY ./requirements/common.txt .
 
+RUN pip install --upgrade pip
+
 RUN pip install --no-cache-dir --no-input -r common.txt
 
 COPY . .
 
 RUN rm -rf requirements
+
 CMD [ "python", "main.py" ]
