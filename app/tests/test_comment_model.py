@@ -21,13 +21,13 @@ API_ROOT = "/api/v1/comments/"
 
 class TestPersonAPi(test.TestCase):
     async def insert_comments(
-        self, comments: list[dict], users: list[dict]
+        self, comments: list[dict], users: list[dict] = []
     ) -> None:
         """Test util method: insert some comments data
 
         Args:
             comments (list[dict]): list of comments
-            users (list[dict]): list of persons (comment owner)
+            users (list[dict]): list of persons (comment owner), Default [].
 
         Returns:
             None
@@ -426,45 +426,69 @@ class TestPersonAPi(test.TestCase):
             "detail": "Comment successfully patched",
         }
 
-    # async def test_put_comment(self):
-    #     # test comment doesn't exist
-    #     comment_ID = 1
-    #     comment = INIT_DATA.get("comment", [])[0]
-    #     comment["user_id"] = comment.pop("user", 1)
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.put(
-    #             f"{API_ROOT}{comment_ID}",
-    #             data=json.dumps(comment),
-    #         )
-    #     expected = {
-    #         "success": False,
-    #         "comment": {},
-    #         "detail": f"Comment with ID {comment_ID} doesn't exist.",
-    #     }
+    async def test_put_comment(self):
+        comment_ID = 1
+        comment_to_update = {**INIT_DATA.get("comment", [])[0]}
+        comment_new_data = {
+            "content": INIT_DATA.get("comment", [])[1]["content"],
+            "user": INIT_DATA.get("comment", [])[1]["user"],
+        }
 
-    #     assert response.status_code == status.HTTP_404_NOT_FOUND
-    #     assert response.json() == expected
+        # test owner doesn't exist
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.put(
+                f"{API_ROOT}{comment_ID}",
+                data=json.dumps(comment_new_data),
+            )
+        expected = {
+            "success": False,
+            "comment": {},
+            "detail": "Comment owner doesn't exist.",
+        }
 
-    #     # Insert new Comment
-    #     await self.insert_comments([comment], [INIT_DATA.get("person", [])[0]])
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
 
-    #     # Get first comment
-    #     new_owner = await Person.create(**INIT_DATA.get("person", [])[1])
-    #     new_comment_data = INIT_DATA.get("comment", [])[1]
-    #     new_comment_data.pop("user", None)
-    #     new_comment_data["user_id"] = new_owner.id
-    #     async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-    #         response = await ac.put(
-    #             f"{API_ROOT}{comment_ID}",
-    #             data=json.dumps(new_comment_data),
-    #         )
+        await API_functools.insert_default_data("person", quantity=2)
+        # test comment doesn't exist
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.put(
+                f"{API_ROOT}{comment_ID}",
+                data=json.dumps(comment_new_data),
+            )
+        expected = {
+            "success": False,
+            "comment": {},
+            "detail": f"Comment with ID {comment_ID} doesn't exist.",
+        }
 
-    #     assert response.status_code == status.HTTP_202_ACCEPTED
-    #     assert response.json() == {
-    #         "success": True,
-    #         "comment": {"id": 1, **new_comment_data},
-    #         "detail": "Comment successfully edited",
-    #     }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == expected
+
+        # Insert new Comment
+        await self.insert_comments([comment_to_update])
+        # Get first comment
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.put(
+                f"{API_ROOT}{comment_ID}",
+                data=json.dumps(comment_new_data),
+            )
+        comment_to_update.pop("user", None)
+        comment_new_data["user_id"] = comment_new_data.pop("user", 2)
+        actual = response.json()
+        expected = {
+            "success": True,
+            "comment": {
+                **comment_to_update,
+                **comment_new_data,
+                "id": 1,
+                "edited": actual["comment"]["edited"],
+            },
+            "detail": "Comment successfully updated",
+        }
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert actual == expected
 
     # async def test_delete_user(self):
 
