@@ -1873,7 +1873,7 @@ INIT_DATA = {
         {"user": 7, "comment": 7},
         {"user": 8, "comment": 8},
         {"user": 9, "comment": 9},
-        {"user": 0, "comment": 10},
+        {"user": 10, "comment": 10},
         {"user": 1, "comment": 1},
         {"user": 2, "comment": 2},
         {"user": 3, "comment": 3},
