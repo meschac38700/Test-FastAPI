@@ -198,9 +198,7 @@ async def create_comment(res: Response, comment: dict) -> Dict[str, Any]:
         data["detail"] = "Comment owner doesn't exist"
         return data
     comment["user"] = comment_owner
-    data["comment"] = API_functools.tortoise_to_dict(
-        await Comment.create(**comment)
-    )
+    data["comment"] = API_functools.tortoise_to_dict(await Comment.create(**comment))
     return jsonable_encoder(data)
 
 

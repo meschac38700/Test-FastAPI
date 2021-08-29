@@ -19,9 +19,7 @@ API_ROOT = "/api/v1/comments/"
 
 
 class TestPersonAPi(test.TestCase):
-    async def insert_comments(
-        self, comments: list[dict], users: list[dict] = []
-    ) -> None:
+    async def insert_comments(self, comments: list[dict], users: list[dict] = []) -> None:
         """Test util method: insert some comments data
 
         Args:
@@ -36,16 +34,10 @@ class TestPersonAPi(test.TestCase):
 
             for comment, user in zip_longest(comments, users):
                 if user is not None:
-                    executor.map(
-                        await API_functools._insert_default_data(
-                            "person", user
-                        )
-                    )
+                    executor.map(await API_functools._insert_default_data("person", user))
                 if comment is not None:
                     executor.map(
-                        await API_functools._insert_default_data(
-                            "comment", comment
-                        )
+                        await API_functools._insert_default_data("comment", comment)
                     )
 
     async def test__str__repr__(self):
@@ -84,9 +76,7 @@ class TestPersonAPi(test.TestCase):
 
         # Insert new Comment
         comment_inserted = {**INIT_DATA.get("comment", [])[0]}
-        await self.insert_comments(
-            [comment_inserted], [INIT_DATA.get("person", [])[0]]
-        )
+        await self.insert_comments([comment_inserted], [INIT_DATA.get("person", [])[0]])
 
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT)
@@ -122,9 +112,7 @@ class TestPersonAPi(test.TestCase):
 
         # Scene 1 get first data, previous=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": offset}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": offset})
         actual = response.json()
         expected = {
             "next": f"{API_ROOT}?limit={limit}&offset={limit}",
@@ -148,9 +136,7 @@ class TestPersonAPi(test.TestCase):
 
         # Scene 2 get last data, next=Null
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": limit}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
         actual = response.json()
 
         expected = {
@@ -177,9 +163,7 @@ class TestPersonAPi(test.TestCase):
         offset = -1
         # Test bad limit and offset values
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(
-                API_ROOT, params={"limit": limit, "offset": limit}
-            )
+            response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
 
         expected = {
             "success": False,
@@ -400,9 +384,7 @@ class TestPersonAPi(test.TestCase):
     async def test_patch_comment(self):
         comment_ID = 1
         comment_to_update = {**INIT_DATA.get("comment", [])[0]}
-        comment_content = {
-            "content": INIT_DATA.get("comment", [])[1]["content"]
-        }
+        comment_content = {"content": INIT_DATA.get("comment", [])[1]["content"]}
 
         # Comment doesn't exist
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -418,9 +400,7 @@ class TestPersonAPi(test.TestCase):
         assert response.json() == expected
 
         # Insert new Comment
-        await self.insert_comments(
-            [comment_to_update], [INIT_DATA.get("person", [])[0]]
-        )
+        await self.insert_comments([comment_to_update], [INIT_DATA.get("person", [])[0]])
 
         # patch comment content
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -522,9 +502,7 @@ class TestPersonAPi(test.TestCase):
 
         # Insert new Comment
         comment_to_delete = {**INIT_DATA.get("comment", [])[0]}
-        await self.insert_comments(
-            [comment_to_delete], [INIT_DATA.get("person", [])[0]]
-        )
+        await self.insert_comments([comment_to_delete], [INIT_DATA.get("person", [])[0]])
 
         assert await Comment.all().count() == 1
 
