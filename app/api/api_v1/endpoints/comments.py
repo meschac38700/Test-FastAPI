@@ -1,6 +1,7 @@
 from functools import cache
 from typing import Optional, Dict, List, Any
 
+from tortoise.functions import Count
 from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, status, Request, Response
 
@@ -47,11 +48,14 @@ async def filter_comments(
 
     comments = jsonable_encoder(
         await (Comment.all() if filters is None else Comment.filter(**filters))
+        .prefetch_related("vote")
+        .annotate(votes=Count("vote", distinct=True))
         .limit(limit)
         .offset(offset)
         .order_by(order_by)
-        .values(*API_functools.get_attributes(Comment))
+        .values(*API_functools.get_attributes(Comment), "votes")
     )
+
     if len(comments) == 0:
         res.status_code = status.HTTP_404_NOT_FOUND
         return {**response, "detail": "Not Found"}
@@ -104,7 +108,10 @@ async def comments_by_ID(res: Response, comment_ID: int) -> Dict[str, Any]:
     """
 
     comment = jsonable_encoder(
-        await Comment.filter(pk=comment_ID).values(*API_functools.get_attributes(Comment))
+        await Comment.filter(pk=comment_ID)
+        .prefetch_related("vote")
+        .annotate(votes=Count("vote", distinct=True))
+        .values(*API_functools.get_attributes(Comment), "votes")
     )
     data = {
         "success": True,
@@ -191,7 +198,9 @@ async def create_comment(res: Response, comment: dict) -> Dict[str, Any]:
         data["detail"] = "Comment owner doesn't exist"
         return data
     comment["user"] = comment_owner
-    data["comment"] = API_functools.tortoise_to_dict(await Comment.create(**comment))
+    data["comment"] = API_functools.tortoise_to_dict(
+        await Comment.create(**comment)
+    )
     return jsonable_encoder(data)
 
 
