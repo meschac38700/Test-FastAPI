@@ -175,6 +175,8 @@ C = TypeVar("C", bound="Comment")
 
 class Comment(PartialComment):
     user: int = 0
+    top_parent: int = 0
+    parent: int = 0
 
     class Config:
         schema_extra = {
