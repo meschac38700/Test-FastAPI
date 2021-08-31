@@ -242,11 +242,14 @@ class API_functools:
         # Replace foreign attribute to an instance of foreign model
         if table.lower() == "comment" and cls.instance_of(data["user"], int):
             data["user"] = await Person.filter(id=data["user"]).first()
+            data["top_parent"] = await Comment.filter(id=data["top_parent"]).first()
+            data["parent"] = await Comment.filter(id=data["parent"]).first()
         elif (
             table.lower() == "vote"
             and cls.instance_of(data["user"], int)
             and cls.instance_of(data["comment"], int)
         ):
+
             exec("from .api_v1.models.tortoise import Vote")
             data["user"] = await Person.filter(id=data["user"]).first()
             data["comment"] = await Comment.filter(id=data["comment"]).first()
