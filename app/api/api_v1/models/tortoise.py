@@ -1,4 +1,5 @@
 from tortoise import models, fields
+from tortoise.functions import Count
 from tortoise.contrib.pydantic import pydantic_model_creator
 
 from .types import Gender
@@ -31,10 +32,39 @@ Person_Pydantic = pydantic_model_creator(Person, name="Person")
 
 
 class Comment(models.Model):
-    user = fields.ForeignKeyField("models.Person", related_name="comment")
+    user: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.Person", related_name="comment"
+    )
+    parent: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.Comment", related_name="direct_children", null=True, blank=True
+    )
+    top_parent: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.Comment", related_name="children", null=True, blank=True
+    )
     added = fields.DatetimeField(auto_now_add=True)
     edited = fields.DatetimeField(auto_now=True)
     content = fields.TextField()
+
+    async def get_json_children(
+        self, fields: list[str], order_by: str = "id", forward: bool = True
+    ) -> dict[str]:
+        """return all comments child of this comment (comments that reply to the current comment)
+
+        Args:
+            fields (list[str]): filter fields to return
+            order_by (str, optional): ordering return. Defaults to "id".
+            forward (bool: optional): includes child of child
+        Returns:
+            dict[str]: retrieve data
+        """
+        filter_key = {"top_parent_id" if forward else "parent_id": self.id}
+        return await (
+            Comment.filter(**filter_key)
+            .prefetch_related("vote")
+            .annotate(votes=Count("vote", distinct=True))
+            .order_by(order_by)
+            .values(*fields)
+        )
 
     def __str__(self):
         return "{!s}({!s})".format(self.__class__.__name__, self.content[:10])
