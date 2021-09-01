@@ -48,6 +48,17 @@ class TestPersonAPi(test.TestCase):
                     )
                 executor.map(await API_functools._insert_default_data("vote", vote))
 
+    def test_vote_attributes(self):
+        expected_attrs = (
+            "id",
+            "comment_id",
+            "user_id",
+        )
+        actual_attrs = API_functools.get_attributes(Vote)
+        for attr in expected_attrs:
+            assert attr in actual_attrs
+        assert len(expected_attrs) == len(actual_attrs)
+
     async def test__str__repr__(self):
         user = await Person.create(**INIT_DATA.get("person", [])[0])
         comment = await Comment.create(user=user, content=default_content)
