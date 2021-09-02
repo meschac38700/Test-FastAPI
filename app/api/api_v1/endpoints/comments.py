@@ -73,6 +73,7 @@ async def comments(
     limit: Optional[int] = 20,
     offset: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
+    parents: bool = False,
 ) -> Optional[List[Dict[str, Any]]]:
 
     """Get all comments or some of them using 'offset' and 'limit'\n
@@ -85,11 +86,23 @@ async def comments(
         sort (str, optional): the order of the result. \
         attribute:(asc {ascending} or desc {descending}). \
         Defaults to "id:asc".\n
+        parents (bool): get only parents comments. Defaults to False
     Returns:\n
         Optional[List[Dict[str, Any]]]: list of comments found or \
         Dict with error\n
     """
     max_comments = await Comment.all().count()
+    if parents:
+        max_comments = await Comment.filter(parent_id=None).count()
+        return await filter_comments(
+            req,
+            res,
+            max_comments,
+            offset=offset,
+            limit=5,
+            sort=sort,
+            filters={"parent_id": None},
+        )
 
     return await filter_comments(
         req, res, max_comments, offset=offset, limit=limit, sort=sort
