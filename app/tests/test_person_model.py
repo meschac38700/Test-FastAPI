@@ -66,7 +66,7 @@ class TestPersonAPi(test.TestCase):
         )
 
     def test_user_attributes(self):
-        user_attributes = (
+        expected_attrs = (
             "id",
             "is_admin",
             "first_name",
@@ -79,7 +79,10 @@ class TestPersonAPi(test.TestCase):
             "date_of_birth",
             "country_of_birth",
         )
-        assert API_functools.get_attributes(Person) == user_attributes
+        actual_attrs = API_functools.get_attributes(Person)
+        for attr in expected_attrs:
+            assert attr in actual_attrs
+        assert len(expected_attrs) == len(actual_attrs)
 
     async def test_create_user(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
