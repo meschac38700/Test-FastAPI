@@ -179,13 +179,18 @@ class API_functools:
         # manage next data
         base = request.scope.get("path")
         # retrieve query string (GET params)
-        query_string = f'&{request.scope.get("query_string").decode("utf-8")}'
-        query_string = "&".join(
-            filter(
-                lambda query: "limit" not in query and "offset" not in query,
-                query_string.split("&"),
+        query_string = f'&{(request.scope.get("query_string") or b"").decode("utf-8")}'
+        query_string = (
+            "&".join(
+                filter(
+                    lambda query: "limit" not in query and "offset" not in query,
+                    query_string.split("&"),
+                )
             )
+            if len(query_string) > 1
+            else ""
         )
+
         if offset + limit < nb_total_data and limit <= nb_total_data:
             next_offset = offset + limit
             _data["next"] = f"{base}?limit={limit}&offset={next_offset}{query_string}"
