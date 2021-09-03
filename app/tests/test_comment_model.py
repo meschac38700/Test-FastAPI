@@ -9,8 +9,8 @@ from tortoise.contrib import test
 from main import app
 from app.api.api_v1 import settings
 from app.api.utils import API_functools
-from app.api.api_v1.models.tortoise import Person, Comment
 from app.api.api_v1.storage.initial_data import INIT_DATA
+from app.api.api_v1.models.tortoise import Person, Comment
 from app.api.api_v1.models.pydantic import default_content as lorem
 
 TORTOISE_TEST_DB = getattr(settings, "TORTOISE_TEST_DB", "sqlite://:memory:")
@@ -55,15 +55,50 @@ class TestPersonAPi(test.TestCase):
         assert comment.__str__() == expected_str
 
     def test_comment_attributes(self):
-        comment_attributes = (
+        expected_attrs = (
             "id",
             "added",
             "edited",
             "content",
+            "parent_id",
             "user_id",
+            "top_parent_id",
         )
-        print("ATTR", API_functools.get_attributes(Comment))
-        assert API_functools.get_attributes(Comment) == comment_attributes
+        actual_attrs = API_functools.get_attributes(Comment)
+        for attr in expected_attrs:
+            assert attr in actual_attrs
+        assert len(expected_attrs) == len(actual_attrs)
+
+    async def test_get_children(self):
+        # insert data
+        await API_functools.insert_default_data(
+            data={
+                "person": INIT_DATA.get("person", [])[:20],
+                "comment": INIT_DATA.get("comment", [])[:20],
+            }
+        )
+        comment = await Comment.filter(id=1).first()
+        expected_children_IDs = list(
+            filter(
+                lambda c: c is not None,
+                list(
+                    map(
+                        lambda tpl: tpl[0]
+                        if tpl[1]["top_parent"] == comment.id
+                        else None,
+                        enumerate(INIT_DATA.get("comment", [])[:20], start=1),
+                    ),
+                ),
+            )
+        )
+        actual_children_IDs = tuple(map(lambda c: c.id, await comment.children))
+        actual_json_children_IDs = tuple(
+            map(lambda c: c["id"], await comment.get_json_children(["id"]))
+        )
+        assert len(actual_children_IDs) and len(actual_json_children_IDs) == len(
+            expected_children_IDs
+        )
+        actual_children_IDs and actual_json_children_IDs == expected_children_IDs
 
     async def test_get_comments(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -93,12 +128,50 @@ class TestPersonAPi(test.TestCase):
                     "edited": actual["comments"][0]["edited"],
                     "votes": actual["comments"][0]["votes"],
                     "content": comment_inserted["content"],
+                    "top_parent_id": comment_inserted["top_parent"],
+                    "parent_id": comment_inserted["parent"],
                 }
             ],
         }
 
         assert response.status_code == status.HTTP_200_OK
         assert expected == actual
+
+    async def test_get_comments_only_parents(self):
+        comments = INIT_DATA.get("comment", [])[:20]
+        # insert data
+        await API_functools.insert_default_data(
+            data={
+                "person": INIT_DATA.get("person", [])[:20],
+                "comment": comments,
+            }
+        )
+
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(f"{API_ROOT}?parents=1")
+        actual = response.json()
+        expected = {
+            "next": None,
+            "previous": None,
+            "success": True,
+            "comments": [
+                {
+                    "id": actual["comments"][pk - 1]["id"],
+                    **{
+                        k if k not in ("user", "top_parent", "parent") else f"{k}_id": v
+                        for k, v in cmt.items()
+                    },
+                    "edited": actual["comments"][pk - 1]["edited"],
+                    "votes": actual["comments"][0]["votes"],
+                }
+                for pk, cmt in enumerate(
+                    filter(lambda c: c["parent"] is None, comments), start=1
+                )
+            ],
+        }
+
+        assert response.status_code == status.HTTP_200_OK
+        assert actual == expected
 
     async def test_get_comments_with_limit_offset(self):
         limit = 4
@@ -126,6 +199,8 @@ class TestPersonAPi(test.TestCase):
                     "content": comment["content"],
                     "votes": actual["comments"][n - 1]["votes"],
                     "user_id": comment["user"],
+                    "top_parent_id": comment["top_parent"],
+                    "parent_id": comment["parent"],
                 }
                 for n, comment in enumerate(comments[:limit], start=1)
             ],
@@ -151,6 +226,8 @@ class TestPersonAPi(test.TestCase):
                     "content": comment["content"],
                     "votes": actual["comments"][n]["votes"],
                     "user_id": comment["user"],
+                    "top_parent_id": comment["top_parent"],
+                    "parent_id": comment["parent"],
                 }
                 for n, comment in enumerate(comments[limit:], start=0)
             ],
@@ -207,6 +284,8 @@ class TestPersonAPi(test.TestCase):
                     "content": c["content"],
                     "votes": actual["comments"][n]["votes"],
                     "user_id": c["user"],
+                    "top_parent_id": c["top_parent"],
+                    "parent_id": c["parent"],
                 }
                 for n, c in enumerate(comments, start=0)
             ],
@@ -235,6 +314,8 @@ class TestPersonAPi(test.TestCase):
                     "content": c["content"],
                     "votes": actual["comments"][n]["votes"],
                     "user_id": c["user"],
+                    "top_parent_id": c["top_parent"],
+                    "parent_id": c["parent"],
                 }
                 for n, c in enumerate(comments, start=0)
             ],
@@ -281,7 +362,10 @@ class TestPersonAPi(test.TestCase):
             "success": True,
             "comment": {
                 "id": 1,
-                **comment,
+                **{
+                    k if k not in ("user", "top_parent", "parent") else f"{k}_id": v
+                    for k, v in comment.items()
+                },
                 "edited": actual["comment"]["edited"],
             },
             "detail": "Comment successfully created",
@@ -310,7 +394,10 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "success": True,
             "comment": {
-                **comment,
+                **{
+                    k if k not in ("user", "top_parent", "parent") else f"{k}_id": v
+                    for k, v in comment.items()
+                },
                 "id": comment_ID,
                 "edited": actual["comment"]["edited"],
                 "votes": actual["comment"]["votes"],
@@ -363,7 +450,10 @@ class TestPersonAPi(test.TestCase):
         actual = response.json()
         expected_comments = [
             {
-                **{k if k != "user" else "user_id": v for k, v in cm.items()},
+                **{
+                    k if k not in ("user", "top_parent", "parent") else f"{k}_id": v
+                    for k, v in cm.items()
+                },
                 "id": pk,
                 "edited": actual["comments"][pk - 1]["edited"],
                 "votes": actual["comments"][pk - 1]["votes"],
@@ -408,6 +498,8 @@ class TestPersonAPi(test.TestCase):
                 f"{API_ROOT}{comment_ID}", data=json.dumps(comment_content)
             )
         comment_to_update["user_id"] = comment_to_update.pop("user")
+        comment_to_update["top_parent_id"] = comment_to_update.pop("top_parent", None)
+        comment_to_update["parent_id"] = comment_to_update.pop("parent", None)
         comment_to_update["id"] = 1
         actual = response.json()
 
@@ -470,6 +562,8 @@ class TestPersonAPi(test.TestCase):
                 data=json.dumps(comment_new_data),
             )
         comment_to_update.pop("user", None)
+        comment_to_update["top_parent_id"] = comment_to_update.pop("top_parent", None)
+        comment_to_update["parent_id"] = comment_to_update.pop("parent", None)
         comment_new_data["user_id"] = comment_new_data.pop("user", 2)
         actual = response.json()
         expected = {
@@ -515,7 +609,10 @@ class TestPersonAPi(test.TestCase):
         expected = {
             "success": True,
             "comment": {
-                **comment_to_delete,
+                **{
+                    k if k not in ("user", "top_parent", "parent") else f"{k}_id": v
+                    for k, v in comment_to_delete.items()
+                },
                 "edited": actual["comment"]["edited"],
                 "id": comment_ID,
             },
