@@ -83,6 +83,17 @@ class TestPersonAPi(test.TestCase):
                 lambda c: c is not None,
                 list(
                     map(
+                        lambda tpl: tpl[0] if tpl[1]["parent"] == comment.id else None,
+                        enumerate(INIT_DATA.get("comment", [])[:20], start=1),
+                    ),
+                ),
+            )
+        )
+        expected_deepDeep_children_IDs = list(
+            filter(
+                lambda c: c is not None,
+                list(
+                    map(
                         lambda tpl: tpl[0]
                         if tpl[1]["top_parent"] == comment.id
                         else None,
@@ -99,6 +110,18 @@ class TestPersonAPi(test.TestCase):
             expected_children_IDs
         )
         actual_children_IDs and actual_json_children_IDs == expected_children_IDs
+
+        # test deep Deep children
+        actual_children_IDs = tuple(map(lambda c: c.id, await comment.children))
+        actual_json_children_IDs = tuple(
+            map(lambda c: c["id"], await comment.json_children(["id"], deep=True))
+        )
+        assert len(actual_children_IDs) and len(actual_json_children_IDs) == len(
+            expected_deepDeep_children_IDs
+        )
+        (
+            actual_children_IDs and actual_json_children_IDs
+        ) == expected_deepDeep_children_IDs
 
     async def test_get_comments(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -127,6 +150,7 @@ class TestPersonAPi(test.TestCase):
                     "added": comment_inserted["added"],
                     "edited": actual["comments"][0]["edited"],
                     "votes": actual["comments"][0]["votes"],
+                    "nb_children": actual["comments"][0]["nb_children"],
                     "content": comment_inserted["content"],
                     "top_parent_id": comment_inserted["top_parent"],
                     "parent_id": comment_inserted["parent"],
@@ -162,7 +186,8 @@ class TestPersonAPi(test.TestCase):
                         for k, v in cmt.items()
                     },
                     "edited": actual["comments"][pk - 1]["edited"],
-                    "votes": actual["comments"][0]["votes"],
+                    "votes": actual["comments"][pk - 1]["votes"],
+                    "nb_children": actual["comments"][pk - 1]["nb_children"],
                 }
                 for pk, cmt in enumerate(
                     filter(lambda c: c["parent"] is None, comments), start=1
@@ -198,6 +223,7 @@ class TestPersonAPi(test.TestCase):
                     "edited": actual["comments"][n - 1]["edited"],
                     "content": comment["content"],
                     "votes": actual["comments"][n - 1]["votes"],
+                    "nb_children": actual["comments"][n - 1]["nb_children"],
                     "user_id": comment["user"],
                     "top_parent_id": comment["top_parent"],
                     "parent_id": comment["parent"],
@@ -225,6 +251,7 @@ class TestPersonAPi(test.TestCase):
                     "edited": actual["comments"][n]["edited"],
                     "content": comment["content"],
                     "votes": actual["comments"][n]["votes"],
+                    "nb_children": actual["comments"][n]["nb_children"],
                     "user_id": comment["user"],
                     "top_parent_id": comment["top_parent"],
                     "parent_id": comment["parent"],
@@ -283,6 +310,7 @@ class TestPersonAPi(test.TestCase):
                     "edited": actual["comments"][n]["edited"],
                     "content": c["content"],
                     "votes": actual["comments"][n]["votes"],
+                    "nb_children": actual["comments"][n]["nb_children"],
                     "user_id": c["user"],
                     "top_parent_id": c["top_parent"],
                     "parent_id": c["parent"],
@@ -313,6 +341,7 @@ class TestPersonAPi(test.TestCase):
                     "edited": actual["comments"][n]["edited"],
                     "content": c["content"],
                     "votes": actual["comments"][n]["votes"],
+                    "nb_children": actual["comments"][n]["nb_children"],
                     "user_id": c["user"],
                     "top_parent_id": c["top_parent"],
                     "parent_id": c["parent"],
@@ -402,6 +431,7 @@ class TestPersonAPi(test.TestCase):
                 "id": expected_comment.id,
                 "edited": expected_comment.edited.isoformat(),
                 "votes": actual["comment"]["votes"],
+                "nb_children": actual["comment"]["nb_children"],
             },
             "detail": "Successful operation",
         }
@@ -476,6 +506,7 @@ class TestPersonAPi(test.TestCase):
                 "id": pk,
                 "edited": actual["comments"][pk - 1]["edited"],
                 "votes": actual["comments"][pk - 1]["votes"],
+                "nb_children": actual["comments"][pk - 1]["nb_children"],
             }
             for pk, cm in enumerate(comments, start=1)
         ]
