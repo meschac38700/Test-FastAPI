@@ -46,21 +46,21 @@ class Comment(models.Model):
     content = fields.TextField()
 
     async def json_children(
-        self, fields: list[str] = [], order_by: str = "id", forward: bool = False
+        self, fields: list[str] = [], order_by: str = "id", deep: bool = False
     ) -> dict[str]:
         """return all comments child of this comment (comments that reply to the current comment)
 
         Args:
             fields (list[str]): list of fields to return, default []
             order_by (str, optional): ordering return. Defaults to "id".
-            forward (bool: optional): forward Deep children
+            deep (bool: optional): deep Deep children
         Returns:
             dict[str]: retrieve data
         """
         from app.api.utils import API_functools
 
         fields = fields if len(fields) > 0 else API_functools.get_attributes(Comment)
-        filter_key = {"top_parent_id" if forward else "parent_id": self.id}
+        filter_key = {"top_parent_id" if deep else "parent_id": self.id}
         return await (
             Comment.filter(**filter_key)
             .prefetch_related("vote")
