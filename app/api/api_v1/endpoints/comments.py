@@ -111,29 +111,38 @@ async def comments(
 
 @cache
 @router.get("/{comment_ID}", status_code=status.HTTP_200_OK)
-async def comments_by_ID(res: Response, comment_ID: int) -> Dict[str, Any]:
+async def comments_by_ID(
+    res: Response, comment_ID: int, children: bool = False
+) -> Dict[str, Any]:
     """Get comment by ID\n
 
     Args:\n
         comment_ID (int): comment ID\n
+        children (bool): get current comment children
     Returns:\n
         Dict[str, Any]: contains comment found\n
     """
+    key, value = ("comment", {}) if not children else ("children", [])
+    data = {"success": True, key: value, "detail": "Successful operation"}
 
-    comment = jsonable_encoder(
-        await Comment.filter(pk=comment_ID)
-        .prefetch_related("vote")
-        .annotate(votes=Count("vote", distinct=True))
-        .values(*API_functools.get_attributes(Comment), "votes")
-    )
-    data = {
-        "success": True,
-        "comment": API_functools.get_or_default(comment, index=0, default={}),
-    }
-    if len(comment) == 0:
+    if not await Comment.exists(pk=comment_ID):
         res.status_code = status.HTTP_404_NOT_FOUND
         data["success"] = False
         data["detail"] = "Not Found"
+        return data
+
+    if children:
+        data["children"] = await (
+            await Comment.filter(pk=comment_ID).first()
+        ).json_children()
+    else:
+        comment = jsonable_encoder(
+            await Comment.filter(pk=comment_ID)
+            .prefetch_related("vote")
+            .annotate(votes=Count("vote", distinct=True))
+            .values(*API_functools.get_attributes(Comment), "votes")
+        )
+        data["comment"] = API_functools.get_or_default(comment, index=0, default={})
     return data
 
 
