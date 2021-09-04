@@ -49,11 +49,13 @@ async def filter_comments(
     comments = jsonable_encoder(
         await (Comment.all() if filters is None else Comment.filter(**filters))
         .prefetch_related("vote")
+        .prefetch_related("children")
         .annotate(votes=Count("vote", distinct=True))
+        .annotate(nb_children=Count("children", distinct=True))
         .limit(limit)
         .offset(offset)
         .order_by(order_by)
-        .values(*API_functools.get_attributes(Comment), "votes")
+        .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
     )
 
     if len(comments) == 0:
@@ -73,6 +75,7 @@ async def comments(
     limit: Optional[int] = 20,
     offset: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
+    parents: bool = False,
 ) -> Optional[List[Dict[str, Any]]]:
 
     """Get all comments or some of them using 'offset' and 'limit'\n
@@ -85,11 +88,23 @@ async def comments(
         sort (str, optional): the order of the result. \
         attribute:(asc {ascending} or desc {descending}). \
         Defaults to "id:asc".\n
+        parents (bool): get only parents comments. Defaults to False
     Returns:\n
         Optional[List[Dict[str, Any]]]: list of comments found or \
         Dict with error\n
     """
     max_comments = await Comment.all().count()
+    if parents:
+        max_comments = await Comment.filter(parent_id=None).count()
+        return await filter_comments(
+            req,
+            res,
+            max_comments,
+            offset=offset,
+            limit=5,
+            sort=sort,
+            filters={"parent_id": None},
+        )
 
     return await filter_comments(
         req, res, max_comments, offset=offset, limit=limit, sort=sort
@@ -98,29 +113,40 @@ async def comments(
 
 @cache
 @router.get("/{comment_ID}", status_code=status.HTTP_200_OK)
-async def comments_by_ID(res: Response, comment_ID: int) -> Dict[str, Any]:
+async def comments_by_ID(
+    res: Response, comment_ID: int, children: bool = False
+) -> Dict[str, Any]:
     """Get comment by ID\n
 
     Args:\n
         comment_ID (int): comment ID\n
+        children (bool): get current comment children
     Returns:\n
         Dict[str, Any]: contains comment found\n
     """
+    key, value = ("comment", {}) if not children else ("children", [])
+    data = {"success": True, key: value, "detail": "Successful operation"}
 
-    comment = jsonable_encoder(
-        await Comment.filter(pk=comment_ID)
-        .prefetch_related("vote")
-        .annotate(votes=Count("vote", distinct=True))
-        .values(*API_functools.get_attributes(Comment), "votes")
-    )
-    data = {
-        "success": True,
-        "comment": API_functools.get_or_default(comment, index=0, default={}),
-    }
-    if len(comment) == 0:
+    if not await Comment.exists(pk=comment_ID):
         res.status_code = status.HTTP_404_NOT_FOUND
         data["success"] = False
         data["detail"] = "Not Found"
+        return data
+
+    if children:
+        data["children"] = await (
+            await Comment.filter(pk=comment_ID).first()
+        ).json_children()
+    else:
+        comment = jsonable_encoder(
+            await Comment.filter(pk=comment_ID)
+            .prefetch_related("vote")
+            .prefetch_related("children")
+            .annotate(votes=Count("vote", distinct=True))
+            .annotate(nb_children=Count("children", distinct=True))
+            .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+        )
+        data["comment"] = API_functools.get_or_default(comment, index=0, default={})
     return data
 
 

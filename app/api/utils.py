@@ -178,14 +178,29 @@ class API_functools:
 
         # manage next data
         base = request.scope.get("path")
+        # retrieve query string (GET params)
+        query_string = f'&{(request.scope.get("query_string") or b"").decode("utf-8")}'
+        query_string = (
+            "&".join(
+                filter(
+                    lambda query: "limit" not in query and "offset" not in query,
+                    query_string.split("&"),
+                )
+            )
+            if len(query_string) > 1
+            else ""
+        )
+
         if offset + limit < nb_total_data and limit <= nb_total_data:
             next_offset = offset + limit
-            _data["next"] = f"{base}?limit={limit}&offset={next_offset}"
+            _data["next"] = f"{base}?limit={limit}&offset={next_offset}{query_string}"
 
         # manage previous data
         if offset - limit >= 0 and limit <= nb_total_data:
             previous_offset = offset - limit
-            _data["previous"] = f"{base}?limit={limit}&offset={previous_offset}"
+            _data[
+                "previous"
+            ] = f"{base}?limit={limit}&offset={previous_offset}{query_string}"
         return _data
 
     @classmethod
@@ -242,11 +257,14 @@ class API_functools:
         # Replace foreign attribute to an instance of foreign model
         if table.lower() == "comment" and cls.instance_of(data["user"], int):
             data["user"] = await Person.filter(id=data["user"]).first()
+            data["top_parent"] = await Comment.filter(id=data["top_parent"]).first()
+            data["parent"] = await Comment.filter(id=data["parent"]).first()
         elif (
             table.lower() == "vote"
             and cls.instance_of(data["user"], int)
             and cls.instance_of(data["comment"], int)
         ):
+
             exec("from .api_v1.models.tortoise import Vote")
             data["user"] = await Person.filter(id=data["user"]).first()
             data["comment"] = await Comment.filter(id=data["comment"]).first()
