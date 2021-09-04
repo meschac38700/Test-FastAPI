@@ -49,11 +49,13 @@ async def filter_comments(
     comments = jsonable_encoder(
         await (Comment.all() if filters is None else Comment.filter(**filters))
         .prefetch_related("vote")
+        .prefetch_related("children")
         .annotate(votes=Count("vote", distinct=True))
+        .annotate(nb_children=Count("children", distinct=True))
         .limit(limit)
         .offset(offset)
         .order_by(order_by)
-        .values(*API_functools.get_attributes(Comment), "votes")
+        .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
     )
 
     if len(comments) == 0:
@@ -139,8 +141,10 @@ async def comments_by_ID(
         comment = jsonable_encoder(
             await Comment.filter(pk=comment_ID)
             .prefetch_related("vote")
+            .prefetch_related("children")
             .annotate(votes=Count("vote", distinct=True))
-            .values(*API_functools.get_attributes(Comment), "votes")
+            .annotate(nb_children=Count("children", distinct=True))
+            .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
         )
         data["comment"] = API_functools.get_or_default(comment, index=0, default={})
     return data

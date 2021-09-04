@@ -46,14 +46,14 @@ class Comment(models.Model):
     content = fields.TextField()
 
     async def json_children(
-        self, fields: list[str] = [], order_by: str = "id", forward: bool = True
+        self, fields: list[str] = [], order_by: str = "id", forward: bool = False
     ) -> dict[str]:
         """return all comments child of this comment (comments that reply to the current comment)
 
         Args:
             fields (list[str]): list of fields to return, default []
             order_by (str, optional): ordering return. Defaults to "id".
-            forward (bool: optional): includes child of child
+            forward (bool: optional): forward Deep children
         Returns:
             dict[str]: retrieve data
         """
@@ -65,8 +65,9 @@ class Comment(models.Model):
             Comment.filter(**filter_key)
             .prefetch_related("vote")
             .annotate(votes=Count("vote", distinct=True))
+            .annotate(nb_children=Count("children", distinct=True))
             .order_by(order_by)
-            .values(*fields)
+            .values(*fields, "votes", "nb_children")
         )
 
     def __str__(self):
