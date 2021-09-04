@@ -45,18 +45,21 @@ class Comment(models.Model):
     edited = fields.DatetimeField(auto_now=True)
     content = fields.TextField()
 
-    async def get_json_children(
-        self, fields: list[str], order_by: str = "id", forward: bool = True
+    async def json_children(
+        self, fields: list[str] = [], order_by: str = "id", forward: bool = True
     ) -> dict[str]:
         """return all comments child of this comment (comments that reply to the current comment)
 
         Args:
-            fields (list[str]): filter fields to return
+            fields (list[str]): list of fields to return, default []
             order_by (str, optional): ordering return. Defaults to "id".
             forward (bool: optional): includes child of child
         Returns:
             dict[str]: retrieve data
         """
+        from app.api.utils import API_functools
+
+        fields = fields if len(fields) > 0 else API_functools.get_attributes(Comment)
         filter_key = {"top_parent_id" if forward else "parent_id": self.id}
         return await (
             Comment.filter(**filter_key)
