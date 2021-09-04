@@ -93,7 +93,7 @@ class TestPersonAPi(test.TestCase):
         )
         actual_children_IDs = tuple(map(lambda c: c.id, await comment.children))
         actual_json_children_IDs = tuple(
-            map(lambda c: c["id"], await comment.get_json_children(["id"]))
+            map(lambda c: c["id"], await comment.json_children(["id"]))
         )
         assert len(actual_children_IDs) and len(actual_json_children_IDs) == len(
             expected_children_IDs
@@ -387,6 +387,7 @@ class TestPersonAPi(test.TestCase):
 
         # Insert new Comment
         await self.insert_comments([comment], [INIT_DATA.get("person", [])[0]])
+        expected_comment = await Comment.get(pk=comment_ID)
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(f"{API_ROOT}{comment_ID}")
         actual = response.json()
@@ -398,12 +399,30 @@ class TestPersonAPi(test.TestCase):
                     k if k not in ("user", "top_parent", "parent") else f"{k}_id": v
                     for k, v in comment.items()
                 },
-                "id": comment_ID,
-                "edited": actual["comment"]["edited"],
+                "id": expected_comment.id,
+                "edited": expected_comment.edited.isoformat(),
                 "votes": actual["comment"]["votes"],
             },
+            "detail": "Successful operation",
         }
         assert response.status_code == 200
+        assert actual == expected
+
+        # insert some comments data
+        comments = INIT_DATA.get("comment", [])[1:20]
+        self.insert_comments(comments, INIT_DATA.get("person", [])[1:20])
+
+        # Test Get comment children
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(f"{API_ROOT}{comment_ID}?children=true")
+
+        actual = response.json()
+        expected_children = await expected_comment.json_children()
+
+        expected.pop("comment", None)
+        expected["children"] = expected_children
+
+        assert response.status_code == status.HTTP_200_OK
         assert actual == expected
 
     async def test_get_comment_by_user(self):
