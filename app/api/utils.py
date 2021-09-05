@@ -2,6 +2,8 @@ import re
 import concurrent.futures as futures
 from typing import Optional, Dict, Any, Type, TypeVar, List
 
+from pypika import Table
+from pypika.functions import Concat
 from tortoise.models import Model as TortoiseModel
 from tortoise.fields.relational import RelationalField
 
@@ -13,6 +15,26 @@ MODEL = TypeVar("MODEL", bound="API_functools")
 
 
 class API_functools:
+    @classmethod
+    async def add_owner_fullname(
+        cls: Type[MODEL], data: list[dict], key="owner_fullname"
+    ):
+        person_table = Table("Person")
+        user_IDs = [(c["user_id"], c["id"]) for c in data]
+        owners = await (
+            Person.filter(pk__in=map(lambda t: t[0], user_IDs))
+            .annotate(
+                full_name=Concat(
+                    person_table.first_name, " ", person_table.last_name
+                ).as_("full_name")
+            )
+            .values("full_name")
+        )
+        return [
+            {**data[i], "owner_fullname": owner["full_name"]}
+            for i, owner in enumerate(owners)
+        ]
+
     @classmethod
     def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel):
         return {
