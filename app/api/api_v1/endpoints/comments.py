@@ -45,17 +45,18 @@ async def filter_comments(
             **response,
             "detail": "Invalid values: offset(>=0) or limit(>0)",
         }
-
-    comments = jsonable_encoder(
-        await (Comment.all() if filters is None else Comment.filter(**filters))
-        .prefetch_related("vote")
-        .prefetch_related("children")
-        .annotate(votes=Count("vote", distinct=True))
-        .annotate(nb_children=Count("children", distinct=True))
-        .limit(limit)
-        .offset(offset)
-        .order_by(order_by)
-        .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+    comments = await API_functools.add_owner_fullname(
+        jsonable_encoder(
+            await (Comment.all() if filters is None else Comment.filter(**filters))
+            .prefetch_related("vote")
+            .prefetch_related("children")
+            .annotate(votes=Count("vote", distinct=True))
+            .annotate(nb_children=Count("children", distinct=True))
+            .limit(limit)
+            .offset(offset)
+            .order_by(order_by)
+            .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+        )
     )
 
     if len(comments) == 0:
