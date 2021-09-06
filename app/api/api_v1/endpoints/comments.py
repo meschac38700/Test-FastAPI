@@ -139,22 +139,30 @@ async def comments_by_ID(
             await (await Comment.filter(pk=comment_ID).first()).json_children()
         )
     else:
-        comment = jsonable_encoder(
-            await Comment.filter(pk=comment_ID)
-            .prefetch_related("vote")
-            .prefetch_related("children")
-            .annotate(votes=Count("vote", distinct=True))
-            .annotate(nb_children=Count("children", distinct=True))
-            .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+        data["comment"] = API_functools.get_or_default(
+            await API_functools.add_owner_fullname(
+                [
+                    API_functools.get_or_default(
+                        jsonable_encoder(
+                            await Comment.filter(pk=comment_ID)
+                            .prefetch_related("vote")
+                            .prefetch_related("children")
+                            .annotate(votes=Count("vote", distinct=True))
+                            .annotate(nb_children=Count("children", distinct=True))
+                            .values(
+                                *API_functools.get_attributes(Comment),
+                                "votes",
+                                "nb_children",
+                            )
+                        ),
+                        index=0,
+                        default={},
+                    )
+                ]
+            ),
+            index=0,
+            default={},
         )
-
-        data["comment"] = API_functools.get_or_default(comment, index=0, default={})
-        if len(data["comment"].keys()) > 0:
-            data["comment"] = API_functools.get_or_default(
-                await API_functools.add_owner_fullname([data["comment"]]),
-                index=0,
-                default={},
-            )
 
     return data
 
