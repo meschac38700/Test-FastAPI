@@ -20,6 +20,7 @@ async def filter_comments(
     req: Request,
     res: Response,
     max_comments: int,
+    data: list[dict] = [],
     filters: Optional[dict] = None,
     offset: Optional[int] = 20,
     limit: Optional[int] = 0,
@@ -45,19 +46,22 @@ async def filter_comments(
             **response,
             "detail": "Invalid values: offset(>=0) or limit(>0)",
         }
-    comments = await API_functools.add_owner_fullname(
-        jsonable_encoder(
-            await (Comment.all() if filters is None else Comment.filter(**filters))
-            .prefetch_related("vote")
-            .prefetch_related("children")
-            .annotate(votes=Count("vote", distinct=True))
-            .annotate(nb_children=Count("children", distinct=True))
-            .limit(limit)
-            .offset(offset)
-            .order_by(order_by)
-            .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+    if not len(data) > 0:
+        comments = await API_functools.add_owner_fullname(
+            jsonable_encoder(
+                await (Comment.all() if filters is None else Comment.filter(**filters))
+                .prefetch_related("vote")
+                .prefetch_related("children")
+                .annotate(votes=Count("vote", distinct=True))
+                .annotate(nb_children=Count("children", distinct=True))
+                .limit(limit)
+                .offset(offset)
+                .order_by(order_by)
+                .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+            )
         )
-    )
+    else:
+        comments = data
 
     if len(comments) == 0:
         res.status_code = status.HTTP_404_NOT_FOUND
@@ -115,13 +119,26 @@ async def comments(
 @cache
 @router.get("/{comment_ID}", status_code=status.HTTP_200_OK)
 async def comments_by_ID(
-    res: Response, comment_ID: int, children: bool = False
+    req: Request,
+    res: Response,
+    comment_ID: int,
+    children: bool = False,
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "id:asc",
 ) -> Dict[str, Any]:
     """Get comment by ID\n
 
     Args:\n
         comment_ID (int): comment ID\n
         children (bool): get current comment children
+        limit (int, optional): max number of returned comments. \
+        Defaults to 100.\n
+        offset (int, optional): first comment to return (use with limit). \
+        Defaults to 1.\n
+        sort (str, optional): the order of the result. \
+        attribute:(asc {ascending} or desc {descending}). \
+        Defaults to "id:asc".\n
     Returns:\n
         Dict[str, Any]: contains comment found\n
     """
@@ -135,9 +152,19 @@ async def comments_by_ID(
         return data
 
     if children:
-        data["children"] = await API_functools.add_owner_fullname(
+        data["comment"] = await API_functools.add_owner_fullname(
             await (await Comment.filter(pk=comment_ID).first()).json_children()
         )
+        return await filter_comments(
+            req,
+            res,
+            len(data["comment"]),
+            data=data["comment"],
+            offset=offset,
+            limit=limit,
+            sort=sort,
+        )
+
     else:
         data["comment"] = API_functools.get_or_default(
             await API_functools.add_owner_fullname(
