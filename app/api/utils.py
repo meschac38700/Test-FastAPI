@@ -19,19 +19,16 @@ class API_functools:
     async def add_owner_fullname(
         cls: Type[MODEL], data: list[dict], key="owner_fullname"
     ):
-        person_table = Table("Person")
-        user_IDs = [(c["user_id"], c["id"]) for c in data]
+        user_IDs = [c.get("user_id", None) for c in data]
+        if len(data) == 0 or None in user_IDs:
+            return data
         owners = await (
-            Person.filter(pk__in=map(lambda t: t[0], user_IDs))
-            .annotate(
-                full_name=Concat(
-                    person_table.first_name, " ", person_table.last_name
-                ).as_("full_name")
+            Person.filter(pk__in=map(lambda pk: pk, user_IDs)).values(
+                "first_name", "last_name"
             )
-            .values("full_name")
         )
         return [
-            {**data[i], "owner_fullname": owner["full_name"]}
+            {**data[i], "owner_fullname": f"{owner['first_name']} {owner['last_name']}"}
             for i, owner in enumerate(owners)
         ]
 
