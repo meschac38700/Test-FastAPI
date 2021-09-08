@@ -147,6 +147,8 @@ class API_functools:
         Returns:\n
             Optional[str]: valid sql string order by or None
         """
+        if ":" not in sort:
+            return None
         attr, order = sort.lower().split(":")
         valid_attributes = ("id",) + cls.get_attributes(target_cls, **kwargs)
         if attr in valid_attributes and order in ORDERS.keys():
