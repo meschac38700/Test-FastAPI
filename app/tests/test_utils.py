@@ -84,10 +84,11 @@ class TestUtils(test.TestCase):
         # valid order must consist of an attribute of the Person class
         # and the word "asc" or "desc"
         orders = [
-            ("first_name:asc", "first_name"),
-            ("first_name:desc", "-first_name"),
+            ("first_name", None),
             ("notattributte:asc", None),
             ("id:notvalidkeyword", None),
+            ("first_name:asc", "first_name"),
+            ("first_name:desc", "-first_name"),
         ]
         for order in orders:
             assert API_functools.valid_order(Person, order[0]) == order[1]
