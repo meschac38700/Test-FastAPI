@@ -1,5 +1,6 @@
 from tortoise import models, fields
 from tortoise.functions import Count
+from fastapi.encoders import jsonable_encoder
 from tortoise.contrib.pydantic import pydantic_model_creator
 
 from .types import Gender
@@ -62,13 +63,15 @@ class Comment(models.Model):
         fields = fields if len(fields) > 0 else API_functools.get_attributes(Comment)
         filter_key = {"top_parent_id" if deep else "parent_id": self.id}
         return await API_functools.add_owner_fullname(
-            await (
-                Comment.filter(**filter_key)
-                .prefetch_related("vote")
-                .annotate(votes=Count("vote", distinct=True))
-                .annotate(nb_children=Count("children", distinct=True))
-                .order_by(order_by)
-                .values(*fields, "votes", "nb_children")
+            jsonable_encoder(
+                await (
+                    Comment.filter(**filter_key)
+                    .prefetch_related("vote")
+                    .annotate(votes=Count("vote", distinct=True))
+                    .annotate(nb_children=Count("children", distinct=True))
+                    .order_by(order_by)
+                    .values(*fields, "votes", "nb_children")
+                )
             )
         )
 
