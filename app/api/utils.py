@@ -16,7 +16,19 @@ class API_functools:
     @classmethod
     async def add_owner_fullname(
         cls: Type[MODEL], data: list[dict], key="owner_fullname"
-    ):
+    ) -> list[dict]:
+        """Add owner fullname (first_name + last_name) to every object in given data
+
+        Args:
+
+            cls (API_functools): utility class that used to call this method
+            data (list[dict]): data to process
+            key (str, optional): key name of owner fullname. Defaults to "owner_fullname".
+
+        Returns:
+
+            list[dict]:
+        """
         user_IDs = [c.get("user_id", None) for c in data]
         if len(data) == 0 or None in user_IDs:
             return data
@@ -37,6 +49,17 @@ class API_functools:
 
     @classmethod
     def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel):
+        """Return attributes from Tortoise model as a dict[attr, value]
+
+        Args:
+
+            cls (API_functools): utility class that used to call this method
+            instance (TortoiseModel): Tortoise instance
+
+        Returns:
+
+            dict: {attr: value, ...}
+        """
         return {
             key: value
             for key, value in instance.__dict__.items()
@@ -45,11 +68,13 @@ class API_functools:
 
     @classmethod
     def strip_spaces(cls: Type[MODEL], string: str) -> str:
-        """Remove multiple spaces in the given string
+        """Remove space at start/end and replace multiple spaces with a single space
 
         Args:
             string (str): string to be processed
+
         Returns:
+
             str: processed string
         """
         return re.sub(r"\s{2,}", " ", string.strip())
@@ -58,16 +83,17 @@ class API_functools:
     def get_or_default(
         cls: Type[MODEL], list_el: tuple, index: int, default: Any = None
     ) -> Any:
-        """Search element from specific list\n
+        """Return, from a list, element at given index or default if not exists\n
 
-        Args:\n
-            cls (API_functools): utility class that used to call this method\n
+        Args:
+
+            cls (API_functools): utility class that used to call this method
             list_el (tuple): list of elements
             index (int): position of searched element
-            default (Any): default value if element not found in\
-                list of elements\n
+            default (Any): default value if element not found in list of elements
 
-        Returns:\n
+        Returns:
+
             Any: element if found else default
         """
         return default if len(list_el) <= index else list_el[index]
@@ -76,16 +102,18 @@ class API_functools:
     def instance_of(
         cls: Type[MODEL], el: Any, expected_class: Type[Any], **kwargs: dict
     ) -> bool:
-        """Check element is from specific class\n
+        """Check element is instance of given class
 
-        Args:\n
-            cls (API_functools): utility class that used to call this method\n
-            el (Any): object from any class\n
-            expected_class (Type[U]): class expected\n
+        Args:
+
+            cls (API_functools): utility class that used to call this method
+            el (Any): object from any class
+            expected_class (Type[U]): class expected
             kwargs (dict): options
                 base (bool): checking base class
 
-        Returns:\n
+        Returns:
+
             bool: equality(True if equals else False)
         """
         if kwargs.get("base", False):
@@ -98,9 +126,10 @@ class API_functools:
     def get_attributes(
         cls: Type[MODEL], target_cls: TortoiseModel, **kwargs: dict
     ) -> tuple[str]:
-        """Return class object attributes except ID\n
+        """Return all attributes of given class
 
-        Args:\n
+        Args:
+
             target (TortoiseModel): The class
             kwargs (dict): options
                 exclude (list or tuple): attributes to exclude from attributes found
@@ -109,7 +138,8 @@ class API_functools:
                 ignore_foreignKey (bool): Not return foreignKey field.
                     this not includes foreignKey id field, such as: user_id, comment_id
         Returns:
-            tuple[str]: attributes
+
+            tuple[str]: tuple of found attributes
         """
         exclude = kwargs.get("exclude", tuple())  # (attr1, attr2)
         add = kwargs.get("add", tuple())  # (new_attr1, new_attr2)
@@ -136,15 +166,18 @@ class API_functools:
     def valid_order(
         cls: Type[MODEL], target_cls: TortoiseModel, sort: str, **kwargs: dict
     ) -> Optional[str]:
-        """Validator for sort db query result with \
-            attribute:direction(asc or desc)\n
+        """Validator for given sort that will be used to sort db result.
+        Format: attribute:direction(asc or desc), ex: id:asc
 
-        Args:\n
-            cls (API_functools): utility class that used to call this method\n
-            target_cls (TortoiseModel): model for db data\n
-            sort (str): string to valid from http request\n
+        Args:
+
+            cls (API_functools): utility class that used to call this method
+            target_cls (TortoiseModel): model for db data
+            sort (str): string to valid from http request
             kwargs (dict): Options
-        Returns:\n
+
+        Returns:
+
             Optional[str]: valid sql string order by or None
         """
         if ":" not in sort:
@@ -161,16 +194,17 @@ class API_functools:
         attr: str,
         target_cls: TortoiseModel,
     ) -> bool:
-        """Check if attr is a target_cls's attribute
-           except the ID attribute\n
+        """Check if attr is attribute of given class
 
         Args:
-            cls (MODEL): utility class that used to call this method\n
-            target_cls (TortoiseModel): model for db data\n
+
+            cls (MODEL): utility class that used to call this method
+            target_cls (TortoiseModel): model for db data
             attr (str): attribute to check
 
         Returns:
-            bool: is valid attribute
+
+            bool: is/not valid attribute
         """
         return attr.lower() in cls.get_attributes(target_cls)
 
@@ -184,9 +218,10 @@ class API_functools:
         offset: int,
         data_type: str = "users",
     ) -> Dict[str, Any]:
-        """Manage next/previous data link(url)
+        """Add next and previous urls to manage response pagination
 
         Args:
+
             request (Request): current request
             data (Dict[str, Any]): request response data
             nb_total_data (int): total number of resources from DB
@@ -195,6 +230,7 @@ class API_functools:
             data_type (str): type of data, Default to users.
 
         Returns:
+
             Dict[str, Any]: response
         """
         _data = {"success": len(data) > 0, "next": None, "previous": None}
@@ -234,14 +270,17 @@ class API_functools:
         data: Optional[dict] = INIT_DATA,
         quantity: int = -1,
     ) -> None:
-        """Init tables with some default fake data\n
+        """Init tables with some default fake data
 
-        Args:\n
-            table (str): specific table to manage, Default to None == all\n
-            data ([dict], optional): data to load. Defaults to INIT_DATA.\n
-            quantity (int, optional): quantity of data to load. Defaults to -1.\n
-        Returns:\n
-            None: nothing\n
+        Args:
+
+            table (str): specific table to manage, Default to None == all
+            data ([dict], optional): data to load. Defaults to INIT_DATA.
+            quantity (int, optional): quantity of data to load. Defaults to -1.
+
+        Returns:
+
+            None
         """
         data = data[table] if table is not None and cls.instance_of(data, dict) else data
 
@@ -267,14 +306,15 @@ class API_functools:
     async def _insert_default_data(
         cls: Type[MODEL], table: str, _data: dict
     ) -> TortoiseModel:
-        """Insert data into specific table
-            called by insert_default_data function\n
+        """Insert data into given table
 
-        Args:\n
+        Args:
+
             table (str): table to modify
-            _data (dict): data to insert according to table model\n
+            _data (dict): data to insert according to table model
 
-        Returns:\n
+        Returns:
+
             TortoiseModel: inserted instance
         """
         data = {**_data}  # prevent: modify content of argument _data
