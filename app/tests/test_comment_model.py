@@ -16,9 +16,12 @@ from app.api.api_v1.models.pydantic import default_content as lorem
 TORTOISE_TEST_DB = getattr(settings, "TORTOISE_TEST_DB", "sqlite://:memory:")
 BASE_URL = "http://127.0.0.1:8000"
 API_ROOT = "/api/v1/comments/"
+invalid_sort_detail = (
+    "Invalid sort parameters. it must match attribute:order. ex: id:asc or id:desc"
+)
 
 
-class TestPersonAPi(test.TestCase):
+class TestCommentAPi(test.TestCase):
     async def insert_comments(self, comments: list[dict], users: list[dict] = []) -> None:
         """Test util method: insert some comments data
 
@@ -78,27 +81,22 @@ class TestPersonAPi(test.TestCase):
             }
         )
         comment = await Comment.filter(id=1).first()
+
         expected_children_IDs = list(
             filter(
                 lambda c: c is not None,
-                list(
-                    map(
-                        lambda tpl: tpl[0] if tpl[1]["parent"] == comment.id else None,
-                        enumerate(INIT_DATA.get("comment", [])[:20], start=1),
-                    ),
+                map(
+                    lambda tpl: tpl[0] if tpl[1]["parent"] == comment.id else None,
+                    enumerate(INIT_DATA.get("comment", [])[:20], start=1),
                 ),
             )
         )
-        expected_deepDeep_children_IDs = list(
+        expected_deep_children_IDs = list(
             filter(
                 lambda c: c is not None,
-                list(
-                    map(
-                        lambda tpl: tpl[0]
-                        if tpl[1]["top_parent"] == comment.id
-                        else None,
-                        enumerate(INIT_DATA.get("comment", [])[:20], start=1),
-                    ),
+                map(
+                    lambda tpl: tpl[0] if tpl[1]["top_parent"] == comment.id else None,
+                    enumerate(INIT_DATA.get("comment", [])[:20], start=1),
                 ),
             )
         )
@@ -111,17 +109,15 @@ class TestPersonAPi(test.TestCase):
         )
         actual_children_IDs and actual_json_children_IDs == expected_children_IDs
 
-        # test deep Deep children
+        # test deep children
         actual_children_IDs = tuple(map(lambda c: c.id, await comment.children))
         actual_json_children_IDs = tuple(
             map(lambda c: c["id"], await comment.json_children(["id"], deep=True))
         )
         assert len(actual_children_IDs) and len(actual_json_children_IDs) == len(
-            expected_deepDeep_children_IDs
+            expected_deep_children_IDs
         )
-        (
-            actual_children_IDs and actual_json_children_IDs
-        ) == expected_deepDeep_children_IDs
+        (actual_children_IDs and actual_json_children_IDs) == expected_deep_children_IDs
 
     async def test_get_comments(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -154,6 +150,7 @@ class TestPersonAPi(test.TestCase):
                     "content": comment_inserted["content"],
                     "top_parent_id": comment_inserted["top_parent"],
                     "parent_id": comment_inserted["parent"],
+                    "owner_fullname": actual["comments"][0]["owner_fullname"],
                 }
             ],
         }
@@ -188,6 +185,7 @@ class TestPersonAPi(test.TestCase):
                     "edited": actual["comments"][pk - 1]["edited"],
                     "votes": actual["comments"][pk - 1]["votes"],
                     "nb_children": actual["comments"][pk - 1]["nb_children"],
+                    "owner_fullname": actual["comments"][pk - 1]["owner_fullname"],
                 }
                 for pk, cmt in enumerate(
                     filter(lambda c: c["parent"] is None, comments), start=1
@@ -227,6 +225,7 @@ class TestPersonAPi(test.TestCase):
                     "user_id": comment["user"],
                     "top_parent_id": comment["top_parent"],
                     "parent_id": comment["parent"],
+                    "owner_fullname": actual["comments"][n - 1]["owner_fullname"],
                 }
                 for n, comment in enumerate(comments[:limit], start=1)
             ],
@@ -255,6 +254,7 @@ class TestPersonAPi(test.TestCase):
                     "user_id": comment["user"],
                     "top_parent_id": comment["top_parent"],
                     "parent_id": comment["parent"],
+                    "owner_fullname": actual["comments"][n]["owner_fullname"],
                 }
                 for n, comment in enumerate(comments[limit:], start=0)
             ],
@@ -314,6 +314,7 @@ class TestPersonAPi(test.TestCase):
                     "user_id": c["user"],
                     "top_parent_id": c["top_parent"],
                     "parent_id": c["parent"],
+                    "owner_fullname": actual["comments"][n]["owner_fullname"],
                 }
                 for n, c in enumerate(comments, start=0)
             ],
@@ -345,6 +346,7 @@ class TestPersonAPi(test.TestCase):
                     "user_id": c["user"],
                     "top_parent_id": c["top_parent"],
                     "parent_id": c["parent"],
+                    "owner_fullname": actual["comments"][n]["owner_fullname"],
                 }
                 for n, c in enumerate(comments, start=0)
             ],
@@ -357,12 +359,11 @@ class TestPersonAPi(test.TestCase):
         order_by = "undefined:asc"
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT, params={"sort": order_by})
-        detail = "Invalid sort parameters. it must match \
-            attribute:order. ex: id:asc or id:desc"
+
         expected = {
             "success": False,
             "comments": [],
-            "detail": detail,
+            "detail": invalid_sort_detail,
         }
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json() == expected
@@ -432,6 +433,7 @@ class TestPersonAPi(test.TestCase):
                 "edited": expected_comment.edited.isoformat(),
                 "votes": actual["comment"]["votes"],
                 "nb_children": actual["comment"]["nb_children"],
+                "owner_fullname": actual["comment"]["owner_fullname"],
             },
             "detail": "Successful operation",
         }
@@ -440,20 +442,36 @@ class TestPersonAPi(test.TestCase):
 
         # insert some comments data
         comments = INIT_DATA.get("comment", [])[1:20]
-        self.insert_comments(comments, INIT_DATA.get("person", [])[1:20])
+        await self.insert_comments(comments, INIT_DATA.get("person", [])[1:20])
 
         # Test Get comment children
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}{comment_ID}?children=true")
+            response = await ac.get(f"{API_ROOT}{expected_comment.id}?children=true")
 
         actual = response.json()
         expected_children = await expected_comment.json_children()
-
         expected.pop("comment", None)
-        expected["children"] = expected_children
+        expected.pop("detail", None)
+        expected["previous"] = None
+        expected["next"] = None
+        expected["comments"] = expected_children
 
-        assert response.status_code == status.HTTP_200_OK
-        assert actual == expected
+        # Test Get comment children bad sort attribute
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.get(
+                f"{API_ROOT}{expected_comment.id}?children=true&sort=invalid:asc"
+            )
+
+        actual = response.json()
+        expected_children = await expected_comment.json_children()
+        expected.pop("comment", None)
+        expected.pop("detail", None)
+        expected["previous"] = None
+        expected["next"] = None
+        expected["comments"] = expected_children
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert actual == {"success": False, "comments": [], "detail": invalid_sort_detail}
 
     async def test_get_comment_by_user(self):
         # Inserted 4 comment with ID 1 as user owner
@@ -507,6 +525,7 @@ class TestPersonAPi(test.TestCase):
                 "edited": actual["comments"][pk - 1]["edited"],
                 "votes": actual["comments"][pk - 1]["votes"],
                 "nb_children": actual["comments"][pk - 1]["nb_children"],
+                "owner_fullname": actual["comments"][pk - 1]["owner_fullname"],
             }
             for pk, cm in enumerate(comments, start=1)
         ]
