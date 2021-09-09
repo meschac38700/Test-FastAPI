@@ -14,31 +14,34 @@ from app.api.api_v1.models.tortoise import Comment, Person
 
 
 router = APIRouter()
+invalid_sort_detail = (
+    "Invalid sort parameters. it must match attribute:order. ex: id:asc or id:desc"
+)
 
 
 async def filter_comments(
     req: Request,
     res: Response,
     max_comments: int,
-    data: list[dict] = [],
+    data: Optional[list[dict]] = None,
     filters: Optional[dict] = None,
     offset: Optional[int] = 20,
     limit: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
 ):
+
     response = {
         "success": False,
         "comments": [],
     }
-    order_by = API_functools.valid_order(Comment, sort)
-
-    if order_by is None:
-        res.status_code = status.HTTP_400_BAD_REQUEST
-        return {
-            **response,
-            "detail": "Invalid sort parameters. it must match \
-            attribute:order. ex: id:asc or id:desc",
-        }
+    if data is None:
+        order_by = API_functools.valid_order(Comment, sort)
+        if order_by is None:
+            res.status_code = status.HTTP_400_BAD_REQUEST
+            return {
+                **response,
+                "detail": invalid_sort_detail,
+            }
 
     if offset < 0 or limit < 1:
         res.status_code = status.HTTP_400_BAD_REQUEST
@@ -46,7 +49,7 @@ async def filter_comments(
             **response,
             "detail": "Invalid values: offset(>=0) or limit(>0)",
         }
-    if not len(data) > 0:
+    if data is None:
         comments = await API_functools.add_owner_fullname(
             jsonable_encoder(
                 await (Comment.all() if filters is None else Comment.filter(**filters))
@@ -66,7 +69,6 @@ async def filter_comments(
     if len(comments) == 0:
         res.status_code = status.HTTP_404_NOT_FOUND
         return {**response, "detail": "Not Found"}
-
     return API_functools.manage_next_previous_page(
         req, comments, max_comments, limit, offset, data_type="comments"
     )
@@ -127,46 +129,57 @@ async def comments_by_ID(
     offset: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
 ) -> Dict[str, Any]:
-    """Get comment by ID\n
+    """Get comment by ID
 
-    Args:\n
-        comment_ID (int): comment ID\n
+    Args:
+
+        comment_ID (int): comment ID
         children (bool): get current comment children
-        limit (int, optional): max number of returned comments. \
-        Defaults to 100.\n
-        offset (int, optional): first comment to return (use with limit). \
-        Defaults to 1.\n
-        sort (str, optional): the order of the result. \
-        attribute:(asc {ascending} or desc {descending}). \
-        Defaults to "id:asc".\n
-    Returns:\n
-        Dict[str, Any]: contains comment found\n
+        limit (int, optional): max number of returned comments.
+            Defaults to 100.
+        offset (int, optional): first comment to return (use with limit).
+            Defaults to 1.
+        sort (str, optional): the order of the result.
+            attribute:(asc {ascending} or desc {descending}). Defaults to "id:asc".
+
+    Returns:
+
+        Dict[str, Any]: contains comment found
     """
-    key, value = ("comment", {}) if not children else ("children", [])
-    data = {"success": True, key: value, "detail": "Successful operation"}
+    key, value = ("comment", {}) if not children else ("comments", [])
+    response = {"success": True, key: value, "detail": "Successful operation"}
 
     if not await Comment.exists(pk=comment_ID):
         res.status_code = status.HTTP_404_NOT_FOUND
-        data["success"] = False
-        data["detail"] = "Not Found"
-        return data
+        response["success"] = False
+        response["detail"] = "Not Found"
+        return response
 
     if children:
-        data["comment"] = await API_functools.add_owner_fullname(
-            await (await Comment.filter(pk=comment_ID).first()).json_children()
-        )
+        order_by = API_functools.valid_order(Comment, sort)
+
+        if order_by is None:
+            res.status_code = status.HTTP_400_BAD_REQUEST
+            return {
+                **response,
+                "success": False,
+                "detail": invalid_sort_detail,
+            }
+        comment = await Comment.filter(pk=comment_ID).first()
+        comments = await comment.json_children(order_by=order_by)
+        response["comments"] = comments
         return await filter_comments(
             req,
             res,
-            len(data["comment"]),
-            data=data["comment"],
+            len(response["comments"]),
+            data=response["comments"],
             offset=offset,
             limit=limit,
             sort=sort,
         )
 
     else:
-        data["comment"] = API_functools.get_or_default(
+        response["comment"] = API_functools.get_or_default(
             await API_functools.add_owner_fullname(
                 [
                     API_functools.get_or_default(
@@ -191,7 +204,7 @@ async def comments_by_ID(
             default={},
         )
 
-    return data
+    return response
 
 
 @cache
@@ -231,7 +244,6 @@ async def comments_by_user(
         }
 
     max_comments = await Comment.filter(user_id=user_ID).count()
-
     return await filter_comments(
         req,
         res,
