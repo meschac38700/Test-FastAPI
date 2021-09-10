@@ -18,6 +18,8 @@ class API_functools:
         cls: Type[MODEL], data: list[dict], key="owner_fullname"
     ) -> list[dict]:
         """Add owner fullname (first_name + last_name) to every object in given data
+        if every object, in data list, contains user_id key otherwise
+        return given data list whitout changes
 
         Args:
 
@@ -39,8 +41,13 @@ class API_functools:
         )
 
         new_data = []
+        owner = {}
         for cmt in data:
-            owner = tuple(filter(lambda owner: owner["id"] == cmt["user_id"], owners))[0]
+            if owner.get("id", 0) != cmt["user_id"]:
+                owner = tuple(
+                    filter(lambda owner: owner["id"] == cmt["user_id"], owners)
+                )[0]
+
             new_data.append(
                 {**cmt, "owner_fullname": f"{owner['first_name']} {owner['last_name']}"},
             )
@@ -48,7 +55,7 @@ class API_functools:
         return new_data
 
     @classmethod
-    def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel):
+    def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel) -> dict:
         """Return attributes from Tortoise model as a dict[attr, value]
 
         Args:
@@ -60,6 +67,7 @@ class API_functools:
 
             dict: {attr: value, ...}
         """
+
         return {
             key: value
             for key, value in instance.__dict__.items()
@@ -83,7 +91,7 @@ class API_functools:
     def get_or_default(
         cls: Type[MODEL], list_el: tuple, index: int, default: Any = None
     ) -> Any:
-        """Return, from a list, element at given index or default if not exists\n
+        """Return, from a list, element at given index or given default value if not exists
 
         Args:
 
@@ -114,7 +122,7 @@ class API_functools:
 
         Returns:
 
-            bool: equality(True if equals else False)
+            bool: is/not instance of given class
         """
         if kwargs.get("base", False):
             return (
@@ -139,7 +147,7 @@ class API_functools:
                     this not includes foreignKey id field, such as: user_id, comment_id
         Returns:
 
-            tuple[str]: tuple of found attributes
+            tuple[str]: tuple of attributes found
         """
         exclude = kwargs.get("exclude", tuple())  # (attr1, attr2)
         add = kwargs.get("add", tuple())  # (new_attr1, new_attr2)
