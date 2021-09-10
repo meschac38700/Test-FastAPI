@@ -14,30 +14,34 @@ from app.api.api_v1.models.tortoise import Comment, Person
 
 
 router = APIRouter()
+invalid_sort_detail = (
+    "Invalid sort parameters. it must match attribute:order. ex: id:asc or id:desc"
+)
 
 
 async def filter_comments(
     req: Request,
     res: Response,
     max_comments: int,
+    data: Optional[list[dict]] = None,
     filters: Optional[dict] = None,
     offset: Optional[int] = 20,
     limit: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
 ):
+
     response = {
         "success": False,
         "comments": [],
     }
-    order_by = API_functools.valid_order(Comment, sort)
-
-    if order_by is None:
-        res.status_code = status.HTTP_400_BAD_REQUEST
-        return {
-            **response,
-            "detail": "Invalid sort parameters. it must match \
-            attribute:order. ex: id:asc or id:desc",
-        }
+    if data is None:
+        order_by = API_functools.valid_order(Comment, sort)
+        if order_by is None:
+            res.status_code = status.HTTP_400_BAD_REQUEST
+            return {
+                **response,
+                "detail": invalid_sort_detail,
+            }
 
     if offset < 0 or limit < 1:
         res.status_code = status.HTTP_400_BAD_REQUEST
@@ -45,23 +49,26 @@ async def filter_comments(
             **response,
             "detail": "Invalid values: offset(>=0) or limit(>0)",
         }
-
-    comments = jsonable_encoder(
-        await (Comment.all() if filters is None else Comment.filter(**filters))
-        .prefetch_related("vote")
-        .prefetch_related("children")
-        .annotate(votes=Count("vote", distinct=True))
-        .annotate(nb_children=Count("children", distinct=True))
-        .limit(limit)
-        .offset(offset)
-        .order_by(order_by)
-        .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
-    )
+    if data is None:
+        comments = await API_functools.add_owner_fullname(
+            jsonable_encoder(
+                await (Comment.all() if filters is None else Comment.filter(**filters))
+                .prefetch_related("vote")
+                .prefetch_related("children")
+                .annotate(votes=Count("vote", distinct=True))
+                .annotate(nb_children=Count("children", distinct=True))
+                .limit(limit)
+                .offset(offset)
+                .order_by(order_by)
+                .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+            )
+        )
+    else:
+        comments = data
 
     if len(comments) == 0:
         res.status_code = status.HTTP_404_NOT_FOUND
         return {**response, "detail": "Not Found"}
-
     return API_functools.manage_next_previous_page(
         req, comments, max_comments, limit, offset, data_type="comments"
     )
@@ -114,40 +121,90 @@ async def comments(
 @cache
 @router.get("/{comment_ID}", status_code=status.HTTP_200_OK)
 async def comments_by_ID(
-    res: Response, comment_ID: int, children: bool = False
+    req: Request,
+    res: Response,
+    comment_ID: int,
+    children: bool = False,
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "id:asc",
 ) -> Dict[str, Any]:
-    """Get comment by ID\n
+    """Get comment by ID
 
-    Args:\n
-        comment_ID (int): comment ID\n
+    Args:
+
+        comment_ID (int): comment ID
         children (bool): get current comment children
-    Returns:\n
-        Dict[str, Any]: contains comment found\n
+        limit (int, optional): max number of returned comments.
+            Defaults to 100.
+        offset (int, optional): first comment to return (use with limit).
+            Defaults to 1.
+        sort (str, optional): the order of the result.
+            attribute:(asc {ascending} or desc {descending}). Defaults to "id:asc".
+
+    Returns:
+
+        Dict[str, Any]: contains comment found
     """
-    key, value = ("comment", {}) if not children else ("children", [])
-    data = {"success": True, key: value, "detail": "Successful operation"}
+    key, value = ("comment", {}) if not children else ("comments", [])
+    response = {"success": True, key: value, "detail": "Successful operation"}
 
     if not await Comment.exists(pk=comment_ID):
         res.status_code = status.HTTP_404_NOT_FOUND
-        data["success"] = False
-        data["detail"] = "Not Found"
-        return data
+        response["success"] = False
+        response["detail"] = "Not Found"
+        return response
 
     if children:
-        data["children"] = await (
-            await Comment.filter(pk=comment_ID).first()
-        ).json_children()
-    else:
-        comment = jsonable_encoder(
-            await Comment.filter(pk=comment_ID)
-            .prefetch_related("vote")
-            .prefetch_related("children")
-            .annotate(votes=Count("vote", distinct=True))
-            .annotate(nb_children=Count("children", distinct=True))
-            .values(*API_functools.get_attributes(Comment), "votes", "nb_children")
+        order_by = API_functools.valid_order(Comment, sort)
+
+        if order_by is None:
+            res.status_code = status.HTTP_400_BAD_REQUEST
+            return {
+                **response,
+                "success": False,
+                "detail": invalid_sort_detail,
+            }
+        comment = await Comment.filter(pk=comment_ID).first()
+        comments = await comment.json_children(order_by=order_by)
+        response["comments"] = comments
+        return await filter_comments(
+            req,
+            res,
+            len(response["comments"]),
+            data=response["comments"],
+            offset=offset,
+            limit=limit,
+            sort=sort,
         )
-        data["comment"] = API_functools.get_or_default(comment, index=0, default={})
-    return data
+
+    else:
+        response["comment"] = API_functools.get_or_default(
+            await API_functools.add_owner_fullname(
+                [
+                    API_functools.get_or_default(
+                        jsonable_encoder(
+                            await Comment.filter(pk=comment_ID)
+                            .prefetch_related("vote")
+                            .prefetch_related("children")
+                            .annotate(votes=Count("vote", distinct=True))
+                            .annotate(nb_children=Count("children", distinct=True))
+                            .values(
+                                *API_functools.get_attributes(Comment),
+                                "votes",
+                                "nb_children",
+                            )
+                        ),
+                        index=0,
+                        default={},
+                    )
+                ]
+            ),
+            index=0,
+            default={},
+        )
+
+    return response
 
 
 @cache
@@ -187,7 +244,6 @@ async def comments_by_user(
         }
 
     max_comments = await Comment.filter(user_id=user_ID).count()
-
     return await filter_comments(
         req,
         res,
