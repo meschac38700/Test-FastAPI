@@ -8,15 +8,21 @@ ENV DATABASE_HOST=api_db
 
 ENV APP_EXPOSED_PORT=80
 
-WORKDIR /src/app
+RUN useradd --create-home appuser
 
-COPY ./requirements/common.txt .
+USER appuser
+
+ENV PATH="/home/appuser/.local/bin:${PATH}"
+
+WORKDIR /home/appuser
+
+COPY --chown=appuser:appuser ./requirements/common.txt .
 
 RUN pip install --upgrade pip
 
-RUN pip install --no-cache-dir --no-input -r common.txt
+RUN pip install --user --no-cache-dir --no-input -r common.txt
 
-COPY . .
+COPY --chown=appuser:appuser . .
 
 RUN rm -rf requirements
 
