@@ -5,7 +5,6 @@ venv
 .vscode
 .idea/
 migrations
-aerich.ini
 *coverage*
 *test-*
 !*.coveragerc
