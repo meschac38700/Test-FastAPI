@@ -1,3 +1,5 @@
+from typing import Any
+
 from tortoise import models, fields
 from tortoise.functions import Count
 from fastapi.encoders import jsonable_encoder
@@ -37,10 +39,10 @@ class Comment(models.Model):
         "models.Person", related_name="comment"
     )
     parent: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.Comment", related_name="direct_children", null=True, blank=True
+        "models.Comment", related_name="children", null=True, blank=True
     )
     top_parent: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.Comment", related_name="children", null=True, blank=True
+        "models.Comment", related_name="all_children", null=True, blank=True
     )
     added = fields.DatetimeField(auto_now_add=True)
     edited = fields.DatetimeField(auto_now=True)
@@ -48,15 +50,20 @@ class Comment(models.Model):
 
     async def json_children(
         self, fields: list[str] = [], order_by: str = "id", deep: bool = False
-    ) -> dict[str]:
-        """return all comments child of this comment (comments that reply to the current comment)
+    ) -> dict[str, Any]:
+        """return all comments child of current comment
+        (comments that reply to the current comment)
 
         Args:
+
             fields (list[str]): list of fields to return, default []
             order_by (str, optional): ordering return. Defaults to "id".
-            deep (bool: optional): deep Deep children
+            deep (bool: optional): get/not also deep children
+            (response to child's comment)
+
         Returns:
-            dict[str]: retrieve data
+
+            dict[str, Any]: data found
         """
         from app.api.utils import API_functools
 

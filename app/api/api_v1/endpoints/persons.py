@@ -20,19 +20,22 @@ async def users(
     offset: Optional[int] = 0,
     sort: Optional[str] = "id:asc",
 ) -> Optional[List[Dict[str, Any]]]:
-    """Get all users or some of them using 'offset' and 'limit'\n
+    """Get all users or some of them using 'offset' and 'limit'
 
-    Args:\n
-        limit (int, optional): max number of returned users. \
-        Defaults to 100.\n
-        offset (int, optional): first user to return (use with limit). \
-        Defaults to 1.\n
-        sort (str, optional): the order of the result. \
-        attribute:(asc {ascending} or desc {descending}). \
-        Defaults to "id:asc".\n
-    Returns:\n
-        Optional[List[Dict[str, Any]]]: list of users found or \
-        Dict with error\n
+    Args:
+
+        limit (int, optional): max number of returned users.
+        Defaults to 100.
+        offset (int, optional): first user to return (use with limit).
+        Defaults to 1.
+        sort (str, optional): the order of the result.
+        attribute:(asc {ascending} or desc {descending}).
+        Defaults to "id:asc".
+
+    Returns:
+
+        Optional[List[Dict[str, Any]]]: list of users found or
+        Dict with error
     """
     response = {
         "success": False,
@@ -71,12 +74,15 @@ async def users(
 @cache
 @router.get("/{user_ID}", status_code=status.HTTP_200_OK)
 async def users_by_ID(res: Response, user_ID: int) -> Dict[str, Any]:
-    """Get user by ID\n
+    """Get user by ID
 
-    Args:\n
-        user_ID (int): user ID\n
-    Returns:\n
-        Dict[str, Any]: contains user found\n
+    Args:
+
+        user_ID (int): user ID
+
+    Returns:
+
+        Dict[str, Any]: user found or Error
     """
     user = await Person_Pydantic.from_queryset(Person.filter(pk=user_ID))
     data = {
@@ -95,13 +101,13 @@ async def users_by_ID(res: Response, user_ID: int) -> Dict[str, Any]:
 async def users_by_attribute(
     res: Response, user_attribute: Any, value: Any
 ) -> List[Dict[str, Any]]:
-    """Get user by attribute except ID attribute\n
+    """Get user by attribute except
 
     Args:
-        user_attribute (Any): user's attribute\n
-        you can combine two or more attributes
-        with keywords "Or", "And"\n
-        ex: first_nameOrlast_name, genderAndemail
+
+        user_attribute (Any): user's attribute
+        you can combine two or more attributes with keywords "Or", "And"
+        ex: idOremail, genderAndemail
 
     Returns:
         List[Dict[str, Any]]: List of users found
@@ -133,13 +139,14 @@ async def users_by_attribute(
 
 @router.post("/", response_model=Person_Pydantic, status_code=status.HTTP_201_CREATED)
 async def create_user(user: User) -> Dict[str, Any]:
-    """Create new user\n
+    """Create new user
 
-    Args:\n
-        user (User): User to create\n
+    Args:
+        user (User): user data according to User model
 
-    Returns:\n
-        Dict[str, Any]: User created\n
+    Returns:
+
+        Dict[str, Any]: User created
     """
     user = await Person.create(**user.__dict__)
     return user
@@ -148,14 +155,16 @@ async def create_user(user: User) -> Dict[str, Any]:
 @cache
 @router.patch("/{user_ID}", status_code=status.HTTP_202_ACCEPTED)
 async def fix_user(res: Response, user_ID: int, user: PartialUser) -> Dict[str, Any]:
-    """Fix some user attributes according to PartialUser class\n
+    """Fix some user attributes according to PartialUser class
 
-    Args:\n
-        user_ID (int): user ID\n
-        user_data (User): new data\n
+    Args:
 
-    Returns:\n
-        Dict[str, Any]: contains User new data or error\n
+        user_ID (int): user ID
+        user_data (User): new data
+
+    Returns:
+
+        Dict[str, Any]: User patched or error if not exists
     """
     response = {"success": False, "user": {}}
 
@@ -179,14 +188,16 @@ async def fix_user(res: Response, user_ID: int, user: PartialUser) -> Dict[str, 
 @cache
 @router.put("/{user_ID}", status_code=status.HTTP_202_ACCEPTED)
 async def update_user(res: Response, user_ID: int, new_data: User) -> Dict[str, Any]:
-    """Update user attributes according to User class\n
+    """Update user attributes according to User class
 
-    Args:\n
-        user_ID (int): user who transfers the data and will be deleted\n
-        new_data (User): new user data\n
+    Args:
 
-    Returns:\n
-        Dict[str, Any]: contains User new data or error\n
+        user_ID (int): user to update
+        new_data (User): new user data
+
+    Returns:
+
+        Dict[str, Any]: user updated
     """
     response = {"success": False, "user": {}}
 
@@ -210,9 +221,11 @@ async def delete_user(res: Response, user_ID: int) -> Dict[str, Any]:
         user_ID (int): user to delete\n
 
     Returns:\n
-        Dict[str, Any]: contains deleted User data or error\n
+        Dict[str, Any]: deleted User or error user not found\n
     """
     response = {"success": False, "user": {}}
+
+    # TODO check permission before delete user
 
     user_found = await Person.get_or_none(id=user_ID)
     if not user_found:

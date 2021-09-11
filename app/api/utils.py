@@ -15,21 +15,22 @@ MODEL = TypeVar("MODEL", bound="API_functools")
 class API_functools:
     @classmethod
     async def add_owner_fullname(
-        cls: Type[MODEL], data: list[dict], key="owner_fullname"
-    ) -> list[dict]:
+        cls: Type[MODEL], data: list[dict[str, Any]], key_name="owner_fullname"
+    ) -> list[dict[str, Any]]:
         """Add owner fullname (first_name + last_name) to every object in given data
-        if every object, in data list, contains user_id key otherwise
-        return given data list whitout changes
+        if every object, in data list, contains "user_id" key otherwise
+        return given data list without changes
 
         Args:
 
             cls (API_functools): utility class that used to call this method
             data (list[dict]): data to process
-            key (str, optional): key name of owner fullname. Defaults to "owner_fullname".
+            key_name (str, optional): key name of owner fullname. Defaults to
+            "owner_fullname".
 
         Returns:
 
-            list[dict]:
+            list[dict[str, Any]]:
         """
         user_IDs = [c.get("user_id", None) for c in data]
         if len(data) == 0 or None in user_IDs:
@@ -55,7 +56,7 @@ class API_functools:
         return new_data
 
     @classmethod
-    def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel) -> dict:
+    def tortoise_to_dict(cls: Type[MODEL], instance: TortoiseModel) -> dict[str, Any]:
         """Return attributes from Tortoise model as a dict[attr, value]
 
         Args:
@@ -91,7 +92,8 @@ class API_functools:
     def get_or_default(
         cls: Type[MODEL], list_el: tuple, index: int, default: Any = None
     ) -> Any:
-        """Return, from a list, element at given index or given default value if not exists
+        """Return, from a list, element at given index or
+        given default value if not exists
 
         Args:
 
