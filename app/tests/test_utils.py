@@ -10,6 +10,35 @@ from app.api.api_v1.models.tortoise import Person, Comment, Vote
 
 
 class TestUtils(test.TestCase):
+    async def test_add_owner_fullname(self):
+        await API_functools.insert_default_data(table="person", quantity=2)
+        data = list(
+            map(
+                lambda cmt: {
+                    **{
+                        k: v
+                        for k, v in cmt.items()
+                        if k not in ("user", "parent", "top_parent")
+                    },
+                    "user_id": cmt["user"],
+                    "parent_id": cmt["parent"],
+                    "top_parent_id": cmt["top_parent"],
+                },
+                INIT_DATA.get("comment", [])[:2],
+            )
+        )
+        actual = await API_functools.add_owner_fullname(data)
+        expected = list(
+            map(
+                lambda cmt: {
+                    **cmt[1],
+                    "owner_fullname": actual[cmt[0]]["owner_fullname"],
+                },
+                enumerate(data),
+            )
+        )
+        assert actual == expected
+
     async def test_tortoise_to_dict(self):
         actual = API_functools.tortoise_to_dict(
             await Person(**INIT_DATA.get("person", [])[0])
