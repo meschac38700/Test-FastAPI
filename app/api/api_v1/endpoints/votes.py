@@ -68,19 +68,18 @@ async def votes(
     sort: Optional[str] = "id:asc",
 ) -> Optional[List[Dict[str, Any]]]:
 
-    """Get all votes or some of them using 'offset' and 'limit'\n
+    """Get all votes or some of them using 'offset' and 'limit'
 
-    Args:\n
-        limit (int, optional): max number of returned votes. \
-        Defaults to 100.\n
-        offset (int, optional): first vote to return (use with limit). \
-        Defaults to 1.\n
-        sort (str, optional): the order of the result. \
-        attribute:(asc {ascending} or desc {descending}). \
-        Defaults to "id:asc".\n
-    Returns:\n
-        Optional[List[Dict[str, Any]]]: list of votes found or \
-        Dict with error\n
+    Args:
+
+        limit (int, optional): max number of returned votes. Defaults to 100.
+        offset (int, optional): first vote to return (use with limit). Defaults to 1.
+        sort (str, optional): the order of the result. attribute:(asc {ascending} or
+        desc {descending}). Defaults to "id:asc".
+
+    Returns:
+
+        Optional[List[Dict[str, Any]]]: list of votes found or Dict with error
     """
     nb_votes = await Vote.all().count()
 
@@ -98,20 +97,19 @@ async def votes_by_comment(
     sort: Optional[str] = "id:asc",
 ) -> Optional[List[Dict[str, Any]]]:
 
-    """Get all votes of comment or some of them using 'offset' and 'limit'\n
+    """Get all votes of comment or some of them using 'offset' and 'limit'
 
-    Args:\n
+    Args:
+
         user_ID (int): user ID
-        limit (int, optional): max number of votes to return. \
-        Defaults to 100.\n
-        offset (int, optional): first vote to return (use with limit). \
-        Defaults to 1.\n
-        sort (str, optional): the order of the result. \
-        attribute:(asc {ascending} or desc {descending}). \
-        Defaults to "id:asc".\n
-    Returns:\n
-        Optional[List[Dict[str, Any]]]: list of votes found or \
-        Dict with error\n
+        limit (int, optional): max number of votes to return. Defaults to 100.
+        offset (int, optional): first vote to return (use with limit). Defaults to 1.
+        sort (str, optional): the order of the result. attribute:(asc {ascending} or
+        desc {descending}). Defaults to "id:asc".
+
+    Returns:
+
+        Optional[List[Dict[str, Any]]]: list of votes found or Dict with error
     """
     comment = await Comment.filter(pk=comment_ID)
 
@@ -145,20 +143,19 @@ async def votes_by_user(
     sort: Optional[str] = "id:asc",
 ) -> Optional[List[Dict[str, Any]]]:
 
-    """Get all votes of user or some of them using 'offset' and 'limit'\n
+    """Get all votes of user or some of them using 'offset' and 'limit'
 
-    Args:\n
+    Args:
+
         user_ID (int): user ID
-        limit (int, optional): max number of votes to return. \
-        Defaults to 100.\n
-        offset (int, optional): first vote to return (use with limit). \
-        Defaults to 1.\n
-        sort (str, optional): the order of the result. \
-        attribute:(asc {ascending} or desc {descending}). \
-        Defaults to "id:asc".\n
-    Returns:\n
-        Optional[List[Dict[str, Any]]]: list of votes found or \
-        Dict with error\n
+        limit (int, optional): max number of votes to return. Defaults to 100.
+        offset (int, optional): first vote to return (use with limit). Defaults to 1.
+        sort (str, optional): the order of the result. attribute:(asc {ascending} or
+        desc {descending}). Defaults to "id:asc".
+
+    Returns:
+
+        Optional[List[Dict[str, Any]]]: list of votes found or Dict with error
     """
     users = await Person.filter(pk=user_ID)
 
@@ -182,14 +179,16 @@ async def votes_by_user(
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
-    """Create new vote\n
+async def create_remove_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
+    """create or remove a Vote from Vote table
 
-    Args:\n
-        vote (VoteBaseModel): vote to create\n
+    Args:
 
-    Returns:\n
-        Dict[str, Any]: vote created\n
+        vote (VoteBaseModel): vote to create or remove
+
+    Returns:
+
+        Dict[str, Any]: vote created
     """
     response = {
         "success": True,
@@ -213,9 +212,20 @@ async def create_vote(res: Response, vote: VoteBaseModel) -> Dict[str, Any]:
         response["detail"] = "Vote comment doesn't exist"
         return response
 
-    response["vote"] = API_functools.tortoise_to_dict(
-        await Vote.create(comment=vote_comment, user=vote_owner)
-    )
+    # check to vote or unVote
+    vote_found = await Vote.get_or_none(user_id=vote_owner.id, comment_id=vote_comment.id)
+    if vote_found is None:  # Vote
+        response["vote"] = API_functools.tortoise_to_dict(
+            await Vote.create(comment=vote_comment, user=vote_owner)
+        )
+    else:  # unVote
+        res.status_code = status.HTTP_202_ACCEPTED
+        await vote_found.delete()
+        response["vote"] = API_functools.tortoise_to_dict(vote_found)
+
+    response["votes"] = await Vote.filter(
+        user_id=vote_owner.id, comment_id=vote_comment.id
+    ).count()
 
     return jsonable_encoder(response)
 
