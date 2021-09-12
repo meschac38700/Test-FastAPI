@@ -89,7 +89,8 @@ CREATE DATABASE fastapidb;
 Then Edit `TORTOISE_ORM` variable in the `settings.py` correctly.
 You will find settings file in `app/api/api_v1` folder
 
-Then init database by running the following command:
+We are using [Aerich](https://github.com/tortoise/aerich) as database migrations tool.
+Init database by running the following aerich command:
 
 ```bash
 aerich init-db
