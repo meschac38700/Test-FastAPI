@@ -19,7 +19,7 @@ BASE_URL = "http://127.0.0.1:8000"
 API_ROOT = "/api/v1/votes/"
 
 
-class TestPersonAPi(test.TestCase):
+class TestVoteAPi(test.TestCase):
     async def insert_votes(
         self,
         votes: list[dict],
@@ -48,17 +48,6 @@ class TestPersonAPi(test.TestCase):
                     )
                 executor.map(await API_functools._insert_default_data("vote", vote))
 
-    def test_vote_attributes(self):
-        expected_attrs = (
-            "id",
-            "comment_id",
-            "user_id",
-        )
-        actual_attrs = API_functools.get_attributes(Vote)
-        for attr in expected_attrs:
-            assert attr in actual_attrs
-        assert len(expected_attrs) == len(actual_attrs)
-
     async def test__str__repr__(self):
         user = await Person.create(**INIT_DATA.get("person", [])[0])
         comment = await Comment.create(user=user, content=default_content)
@@ -75,6 +64,17 @@ class TestPersonAPi(test.TestCase):
         )
         assert vote.__repr__() == expected_repr
         assert vote.__str__() == expected_str
+
+    def test_vote_attributes(self):
+        expected_attrs = (
+            "id",
+            "comment_id",
+            "user_id",
+        )
+        actual_attrs = API_functools.get_attributes(Vote)
+        for attr in expected_attrs:
+            assert attr in actual_attrs
+        assert len(expected_attrs) == len(actual_attrs)
 
     async def test_get_votes(self):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
@@ -349,7 +349,7 @@ class TestPersonAPi(test.TestCase):
         assert response.status_code == status.HTTP_200_OK
         assert actual == expected
 
-    async def test_create_vote(self):
+    async def test_create_remove_vote(self):
 
         vote = INIT_DATA.get("vote", [])[0]
 
@@ -375,7 +375,7 @@ class TestPersonAPi(test.TestCase):
 
         await Comment.create(**{**INIT_DATA.get("comment", [])[0], "user": user})
 
-        # create OK
+        # Add vote
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.post(API_ROOT, data=json.dumps(vote))
 
@@ -386,9 +386,17 @@ class TestPersonAPi(test.TestCase):
                 "comment_id": vote["comment"],
                 "user_id": vote["user"],
             },
+            "votes": 1,
             "detail": "Vote successfully created",
         }
-        assert response.status_code == status.HTTP_201_CREATED
+
+        # Remove vote
+        async with AsyncClient(app=app, base_url=BASE_URL) as ac:
+            response = await ac.post(API_ROOT, data=json.dumps(vote))
+
+        expected["votes"] = 0
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
         assert response.json() == expected
 
     async def test_delete_vote(self):
