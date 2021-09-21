@@ -24,6 +24,8 @@ services:
       - 8000:80
     depends_on:
       - api_db
+    volumes:
+      - .:/home/appuser
 volumes:
   fastapi-data:
     driver: local
