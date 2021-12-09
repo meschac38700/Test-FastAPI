@@ -119,6 +119,6 @@ pytest
 
 ### Contributors
 
-Made with:
+Made by:
 
 ![image](https://contrib.rocks/image?repo=meschac38700/Test-FastAPI)
