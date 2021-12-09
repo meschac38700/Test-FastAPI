@@ -116,3 +116,8 @@ from root folder`(Test-FastAPI/)` run:
 ```bash
 pytest
 ```
+
+### Contributors
+
+This project exists thanks to all the people who contribute!
+![image](https://contrib.rocks/image?repo=meschac38700/Test-FastAPI)
