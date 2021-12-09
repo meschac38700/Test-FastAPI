@@ -119,6 +119,6 @@ pytest
 
 ### Contributors
 
-This project exists thanks to all the people who contribute!
+Made with:
 
 ![image](https://contrib.rocks/image?repo=meschac38700/Test-FastAPI)
