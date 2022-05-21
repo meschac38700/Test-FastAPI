@@ -29,7 +29,7 @@ The app running on http://127.0.0.1:8000/
 
 ## Manual installation without docker
 
-#####- requirements:
+##### requirements:
     - Postgresql
     - python
 
