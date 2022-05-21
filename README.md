@@ -93,7 +93,7 @@ We are using [Aerich](https://github.com/tortoise/aerich) as database migrations
 Init database by running the following aerich command:
 
 ```bash
-aerich init-db
+aerich init -t app.api.api_v1.settings.TORTOISE_ORM && aerich init-db
 ```
 
 ## Run the app

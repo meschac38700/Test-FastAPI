@@ -19,10 +19,13 @@ class TestPydantic(test.TestCase):
             field_info=f,
             model_config=BaseConfig,
         )
-        with pytest.raises(ValueError):
-            long_text = "Lorem Ipsum is simply dummy text of\
+        long_text = "Lorem Ipsum is simply dummy text of\
                 the printing and typesetting industry. "
+        with pytest.raises(ValueError):
+            
             PartialUser.between_3_and_50_characters("He", field=field)
+            
+        with pytest.raises(ValueError):
             PartialUser.between_3_and_50_characters(
                 long_text,
                 field=field,

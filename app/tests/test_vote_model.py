@@ -1,5 +1,6 @@
 import json
 
+from typing import Dict, List, Any
 from itertools import zip_longest
 import concurrent.futures as futures
 
@@ -14,6 +15,8 @@ from app.api.api_v1.storage.initial_data import INIT_DATA
 from app.api.api_v1.models.pydantic import default_content
 from app.api.api_v1.models.tortoise import Person, Comment, Vote
 
+ObjectDict = Dict[str, Any]
+
 TORTOISE_TEST_DB = getattr(settings, "TORTOISE_TEST_DB", "sqlite://:memory:")
 BASE_URL = "http://127.0.0.1:8000"
 API_ROOT = "/api/v1/votes/"
@@ -22,9 +25,9 @@ API_ROOT = "/api/v1/votes/"
 class TestVoteAPi(test.TestCase):
     async def insert_votes(
         self,
-        votes: list[dict],
-        comments: list[dict] = [],
-        users: list[dict] = [],
+        votes: List[ObjectDict],
+        comments: List[ObjectDict] = [],
+        users: List[ObjectDict] = [],
     ) -> None:
         """Test util method: insert some votes data
 
@@ -71,7 +74,7 @@ class TestVoteAPi(test.TestCase):
             "comment_id",
             "user_id",
         )
-        actual_attrs = API_functools.get_attributes(Vote)
+        actual_attrs: tuple[str] = API_functools.get_attributes(Vote)
         for attr in expected_attrs:
             assert attr in actual_attrs
         assert len(expected_attrs) == len(actual_attrs)
@@ -80,7 +83,7 @@ class TestVoteAPi(test.TestCase):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT)
 
-        expected = {"detail": "Not Found", "success": False, "votes": []}
+        expected: ObjectDict = {"detail": "Not Found", "success": False, "votes": []}
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.json() == expected
@@ -172,7 +175,7 @@ class TestVoteAPi(test.TestCase):
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(API_ROOT, params={"limit": limit, "offset": limit})
 
-        expected = {
+        expected: ObjectDict = {
             "success": False,
             "votes": [],
             "detail": "Invalid values: offset(>=0) or limit(>0)",
@@ -187,9 +190,9 @@ class TestVoteAPi(test.TestCase):
         userID_desc = "user_id:desc"
         data_nbr = 4
 
-        comments = [*INIT_DATA.get("comment", [])[:data_nbr]]
-        users = INIT_DATA.get("person", [])[:data_nbr]
-        votes = INIT_DATA.get("vote", [])[:data_nbr]
+        comments: List[ObjectDict] = [*INIT_DATA.get("comment", [])[:data_nbr]]
+        users: List[ObjectDict] = INIT_DATA.get("person", [])[:data_nbr]
+        votes: List[ObjectDict] = INIT_DATA.get("vote", [])[:data_nbr]
 
         await self.insert_votes(comments=comments, users=users, votes=votes)
 
@@ -209,7 +212,7 @@ class TestVoteAPi(test.TestCase):
             ],
             key=lambda order: order[commentID_asc.split(":")[0]],
         )
-        expected = {
+        expected:ObjectDict = {
             "next": None,
             "previous": None,
             "success": True,
@@ -245,7 +248,7 @@ class TestVoteAPi(test.TestCase):
             response = await ac.get(API_ROOT, params={"sort": order_by})
         detail = "Invalid sort parameters. it must match \
             attribute:order. ex: id:asc or id:desc"
-        expected = {
+        expected: ObjectDict = {
             "success": False,
             "votes": [],
             "detail": detail,
@@ -265,89 +268,90 @@ class TestVoteAPi(test.TestCase):
 
         # comment doesn't exist
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}comment/{data_nbr+1}/")
+            response = await ac.get(f"{API_ROOT}comment/{data_nbr+1}")
+            
+            actual: ObjectDict = response.json()
+            
+            expected: ObjectDict = {
+                "success": False,
+                "votes": [],
+                "detail": f"Comment {data_nbr+1} doesn't exist",
+            }
 
-        actual = response.json()
-        expected = {
-            "success": False,
-            "votes": [],
-            "detail": f"Comment {data_nbr+1} doesn't exist",
-        }
-
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert actual == expected
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert actual == expected
 
         # Success
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}comment/{comment_ID}/")
+            response = await ac.get(f"{API_ROOT}comment/{comment_ID}")
 
-        actual = response.json()
-        votes = [
-            {
-                "id": pk,
-                "comment_id": v["comment"],
-                "user_id": v["user"],
+            actual = response.json()
+            votes = [
+                {
+                    "id": pk,
+                    "comment_id": v["comment"],
+                    "user_id": v["user"],
+                }
+                for pk, v in enumerate(votes, start=1)
+                if v["comment"] == comment_ID
+            ]
+            expected = {
+                "next": None,
+                "previous": None,
+                "success": True,
+                "votes": votes,
             }
-            for pk, v in enumerate(votes, start=1)
-            if v["comment"] == comment_ID
-        ]
-        expected = {
-            "next": None,
-            "previous": None,
-            "success": True,
-            "votes": votes,
-        }
 
-        assert response.status_code == status.HTTP_200_OK
-        assert actual == expected
+            assert response.status_code == status.HTTP_200_OK
+            assert actual == expected
 
     async def test_votes_by_user(self):
         # sort by user id ascending order
         user_ID = 1
         data_nbr = 20
-        comments = [*INIT_DATA.get("comment", [])[:data_nbr]]
-        users = INIT_DATA.get("person", [])[:data_nbr]
-        votes = INIT_DATA.get("vote", [])[:data_nbr]
+        comments: List[ObjectDict] = [*INIT_DATA.get("comment", [])[:data_nbr]]
+        users: List[ObjectDict]  = INIT_DATA.get("person", [])[:data_nbr]
+        votes: List[ObjectDict]  = INIT_DATA.get("vote", [])[:data_nbr]
 
         await self.insert_votes(comments=comments, users=users, votes=votes)
 
         # comment doesn't exist
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}user/{data_nbr+1}/")
+            response = await ac.get(f"{API_ROOT}user/{data_nbr+1}")
 
-        actual = response.json()
-        expected = {
-            "success": False,
-            "votes": [],
-            "detail": f"User {data_nbr+1} doesn't exist",
-        }
+            actual = response.json()
+            expected: ObjectDict = {
+                "success": False,
+                "votes": [],
+                "detail": f"User {data_nbr+1} doesn't exist",
+            }
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert actual == expected
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert actual == expected
 
         # Success
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
-            response = await ac.get(f"{API_ROOT}user/{user_ID}/")
+            response = await ac.get(f"{API_ROOT}user/{user_ID}")
 
-        actual = response.json()
-        votes = [
-            {
-                "id": pk,
-                "comment_id": v["comment"],
-                "user_id": v["user"],
+            actual = response.json()
+            votes = [
+                {
+                    "id": pk,
+                    "comment_id": v["comment"],
+                    "user_id": v["user"],
+                }
+                for pk, v in enumerate(votes, start=1)
+                if v["user"] == user_ID
+            ]
+            expected = {
+                "next": None,
+                "previous": None,
+                "success": True,
+                "votes": votes,
             }
-            for pk, v in enumerate(votes, start=1)
-            if v["user"] == user_ID
-        ]
-        expected = {
-            "next": None,
-            "previous": None,
-            "success": True,
-            "votes": votes,
-        }
 
-        assert response.status_code == status.HTTP_200_OK
-        assert actual == expected
+            assert response.status_code == status.HTTP_200_OK
+            assert actual == expected
 
     async def test_create_remove_vote(self):
 
@@ -356,22 +360,22 @@ class TestVoteAPi(test.TestCase):
         # User doesn't exist
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.post(API_ROOT, data=json.dumps(vote))
-        expected = {
-            "success": False,
-            "vote": {},
-            "detail": "Vote owner doesn't exist",
-        }
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json() == expected
+            expected: ObjectDict = {
+                "success": False,
+                "vote": {},
+                "detail": "Vote owner doesn't exist",
+            }
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert response.json() == expected
 
         user = await Person.create(**INIT_DATA.get("person", [])[0])
-
         # Comment doesn't exist
         expected["detail"] = "Vote comment doesn't exist"
+        
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.post(API_ROOT, data=json.dumps(vote))
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json() == expected
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert response.json() == expected
 
         await Comment.create(**{**INIT_DATA.get("comment", [])[0], "user": user})
 
@@ -389,15 +393,14 @@ class TestVoteAPi(test.TestCase):
             "votes": 1,
             "detail": "Vote successfully created",
         }
-
         # Remove vote
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.post(API_ROOT, data=json.dumps(vote))
 
-        expected["votes"] = 0
+            expected["votes"] = 0
 
-        assert response.status_code == status.HTTP_202_ACCEPTED
-        assert response.json() == expected
+            assert response.status_code == status.HTTP_202_ACCEPTED
+            assert response.json() == expected
 
     async def test_delete_vote(self):
         # vote doesn't exist
@@ -405,13 +408,13 @@ class TestVoteAPi(test.TestCase):
         vote_to_delete = INIT_DATA.get("vote", [])[0]
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.delete(f"{API_ROOT}{vote_ID}")
-        expected = {
-            "success": False,
-            "vote": {},
-            "detail": f"Vote with ID {vote_ID} doesn't exist",
-        }
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json() == expected
+            expected: ObjectDict = {
+                "success": False,
+                "vote": {},
+                "detail": f"Vote with ID {vote_ID} doesn't exist",
+            }
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert response.json() == expected
 
         # Insert new vote
         await self.insert_votes(

@@ -420,7 +420,7 @@ class TestPersonAPi(test.TestCase):
         assert response.json() == expected
 
         # Create new User
-        person = await Person.create(**USER_DATA)
+        person: Person = await Person.create(**USER_DATA)
         assert person.id == 1
 
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:

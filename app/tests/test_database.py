@@ -1,7 +1,7 @@
 import concurrent.futures as futures
 
 from tortoise.contrib import test
-from tortoise.query_utils import Q
+from tortoise.expressions import Q
 from main import app
 from app.api.api_v1.storage.database import Database
 

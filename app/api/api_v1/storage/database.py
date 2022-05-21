@@ -1,15 +1,15 @@
 import re
-from typing import Any, List
+from typing import Any, List, Any
 
 from tortoise.contrib.fastapi import register_tortoise
-from tortoise.query_utils import Q
+from tortoise.expressions import Q
 
 from app.api.api_v1.settings import TORTOISE_ORM as DATABASE_CONFIG
 
 
 class Database:
     @classmethod
-    def connect(cls, application=None):
+    def connect(cls, application: Any=None):
         success = True
         try:
             register_tortoise(
@@ -38,12 +38,12 @@ class Database:
             List[Q]: List of Q functions according to attributes and value\n
         """
         attributes = re.compile(r"Or|And|OR|AND").split(user_attribute)
-        query_builder = []
+        query_builder: list[Q] = []
         for attr in attributes:
             attr = attr.strip().lower()
             cond = {f"{attr}__icontains": value}
             if user_attribute.split(attr)[0].lower().endswith("or"):
-                last_query = query_builder.pop()
+                last_query: Q = query_builder.pop()
                 query_builder.append(Q(last_query, Q(**cond), join_type="OR"))
             elif attr != "":
                 query_builder = [*query_builder, Q(**cond)]

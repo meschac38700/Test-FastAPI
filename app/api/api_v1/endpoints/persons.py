@@ -223,7 +223,7 @@ async def delete_user(res: Response, user_ID: int) -> Dict[str, Any]:
     Returns:\n
         Dict[str, Any]: deleted User or error user not found\n
     """
-    response = {"success": False, "user": {}}
+    response: Dict[str, Any] = {"success": False, "user": {}}
 
     # TODO check permission before delete user
 
@@ -234,10 +234,9 @@ async def delete_user(res: Response, user_ID: int) -> Dict[str, Any]:
         return response
 
     await user_found.delete()
-
+    
     response["success"] = True
-    response["user"] = user_found.__dict__
-    response["user"].pop("_partial", None)
-    response["user"].pop("_saved_in_db", None)
+    response["user"] = await Person_Pydantic.from_tortoise_orm(user_found)
     response["detail"] = f"User {user_ID} delete successfully ⭐"
+    
     return response

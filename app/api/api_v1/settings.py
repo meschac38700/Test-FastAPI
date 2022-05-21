@@ -10,8 +10,8 @@ TORTOISE_ORM = {
                 # set ENV variable
                 "host": os.getenv("DATABASE_HOST", "127.0.0.1"),
                 "port": "5432",
-                "user": "postgres",
-                "password": "postgres",
+                "user": "eliam",
+                "password": "eliam",
                 "database": "fastapidb",
             },
         }
