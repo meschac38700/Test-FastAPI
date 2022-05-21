@@ -21,5 +21,5 @@ class TestComment(test.TestCase):
             Comment.at_least_1_character("        ", field=field)
         with pytest.raises(ValueError):
             Comment.at_least_1_character("", field=field)
-            
+
         assert Comment.at_least_1_character("First comment") == "First comment"

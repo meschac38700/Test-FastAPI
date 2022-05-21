@@ -1,5 +1,5 @@
 import re
-from typing import Any, List, Any
+from typing import Any, List
 
 from tortoise.contrib.fastapi import register_tortoise
 from tortoise.expressions import Q
@@ -9,7 +9,7 @@ from app.api.api_v1.settings import TORTOISE_ORM as DATABASE_CONFIG
 
 class Database:
     @classmethod
-    def connect(cls, application: Any=None):
+    def connect(cls, application: Any = None):
         success = True
         try:
             register_tortoise(

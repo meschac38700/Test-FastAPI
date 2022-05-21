@@ -212,7 +212,7 @@ class TestVoteAPi(test.TestCase):
             ],
             key=lambda order: order[commentID_asc.split(":")[0]],
         )
-        expected:ObjectDict = {
+        expected: ObjectDict = {
             "next": None,
             "previous": None,
             "success": True,
@@ -269,9 +269,9 @@ class TestVoteAPi(test.TestCase):
         # comment doesn't exist
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.get(f"{API_ROOT}comment/{data_nbr+1}")
-            
+
             actual: ObjectDict = response.json()
-            
+
             expected: ObjectDict = {
                 "success": False,
                 "votes": [],
@@ -310,8 +310,8 @@ class TestVoteAPi(test.TestCase):
         user_ID = 1
         data_nbr = 20
         comments: List[ObjectDict] = [*INIT_DATA.get("comment", [])[:data_nbr]]
-        users: List[ObjectDict]  = INIT_DATA.get("person", [])[:data_nbr]
-        votes: List[ObjectDict]  = INIT_DATA.get("vote", [])[:data_nbr]
+        users: List[ObjectDict] = INIT_DATA.get("person", [])[:data_nbr]
+        votes: List[ObjectDict] = INIT_DATA.get("vote", [])[:data_nbr]
 
         await self.insert_votes(comments=comments, users=users, votes=votes)
 
@@ -371,7 +371,7 @@ class TestVoteAPi(test.TestCase):
         user = await Person.create(**INIT_DATA.get("person", [])[0])
         # Comment doesn't exist
         expected["detail"] = "Vote comment doesn't exist"
-        
+
         async with AsyncClient(app=app, base_url=BASE_URL) as ac:
             response = await ac.post(API_ROOT, data=json.dumps(vote))
             assert response.status_code == status.HTTP_404_NOT_FOUND

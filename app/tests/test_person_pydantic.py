@@ -22,9 +22,9 @@ class TestPydantic(test.TestCase):
         long_text = "Lorem Ipsum is simply dummy text of\
                 the printing and typesetting industry. "
         with pytest.raises(ValueError):
-            
+
             PartialUser.between_3_and_50_characters("He", field=field)
-            
+
         with pytest.raises(ValueError):
             PartialUser.between_3_and_50_characters(
                 long_text,

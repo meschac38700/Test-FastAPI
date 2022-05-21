@@ -234,9 +234,9 @@ async def delete_user(res: Response, user_ID: int) -> Dict[str, Any]:
         return response
 
     await user_found.delete()
-    
+
     response["success"] = True
     response["user"] = await Person_Pydantic.from_tortoise_orm(user_found)
     response["detail"] = f"User {user_ID} delete successfully ⭐"
-    
+
     return response

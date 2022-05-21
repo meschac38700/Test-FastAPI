@@ -8,11 +8,11 @@ TORTOISE_ORM = {
             "engine": "tortoise.backends.asyncpg",
             "credentials": {
                 # set ENV variable
-                "host": os.getenv("DATABASE_HOST", "127.0.0.1"),
-                "port": "5432",
-                "user": "eliam",
-                "password": "eliam",
-                "database": "fastapidb",
+                "host": os.getenv("POSTGRES_HOST", "127.0.0.1"),
+                "port": os.getenv("POSTGRES_PORT", "5432"),
+                "user": os.getenv("POSTGRES_USER", "postgres"),
+                "password": os.getenv("POSTGRES_PASSWORD", "postgres"),
+                "database": os.getenv("POSTGRES_DB", "fastapidb"),
             },
         }
     },

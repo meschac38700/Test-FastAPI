@@ -1,10 +1,8 @@
-FROM python:3.9.4-slim-buster
+FROM python:3.10.4-slim-buster
 
 LABEL maintainer="Eliam LOTONGA" email="contact@eliam-lotonga.fr"
 
 EXPOSE 80
-
-ENV DATABASE_HOST=api_db
 
 ENV APP_EXPOSED_PORT=80
 
