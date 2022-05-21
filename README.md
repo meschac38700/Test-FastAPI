@@ -29,6 +29,10 @@ The app running on http://127.0.0.1:8000/
 
 ## Manual installation without docker
 
+#####- requirements:
+    - Postgresql
+    - python
+
 Note that, you can create a virtual environment
 if you don't want to install requirements in your host machine
 
@@ -77,7 +81,7 @@ pip install -r requirements/dev.txt
 Connect to your postgres BD using `psql`
 
 ```bash
-psql -U {postgres_user} -p {port_5432} -h {host}
+psql -U postgres -p 5432 -h localhost
 ```
 
 Then create DB `fastapidb`
@@ -92,7 +96,7 @@ We are using [Aerich](https://github.com/tortoise/aerich) as database migrations
 Init database by running the following aerich command:
 
 ```bash
- aerich init-db
+aerich init-db
 ```
 
 ## Run the app
@@ -101,11 +105,11 @@ Init database by running the following aerich command:
 python main.py
 ```
 
-The app running on http://127.0.0.1:8000/
+The app running on [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
 ## Fake Data
 
-To load some fake data, go to [localhost](http://127.0.0.1:8000/data)
+To load some fake data, go to [http://127.0.0.1:8000/data](http://127.0.0.1:8000/data)
 which will load fake data.
 
 ## Run all the tests
