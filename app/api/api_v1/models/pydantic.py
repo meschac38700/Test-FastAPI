@@ -1,12 +1,9 @@
-import re
 from datetime import date
 from typing import Optional, Type, TypeVar
 
-from email_validator import validate_email, EmailNotValidError
-
 from ..models.types import Gender
 from ...utils import API_functools
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, EmailStr, HttpUrl
 
 avatar = "https://robohash.org/autdoloremaccusamus.png?size=150x150&set=set1"
 default_content = """Lorem ipsum dolor sit amet consectetur adipisicing elit.
@@ -18,8 +15,8 @@ PU = TypeVar("PU", bound="PartialUser")
 class PartialUser(BaseModel):
     first_name: str
     last_name: str
-    email: str
-    avatar: Optional[str]
+    email: EmailStr
+    avatar: Optional[HttpUrl]
     company: Optional[str]
     job: Optional[str]
 
@@ -45,51 +42,6 @@ class PartialUser(BaseModel):
                     characters."
             )
         return value
-
-    @classmethod
-    @validator("avatar")
-    def valid_url_avatar(cls: Type[PU], value: str, **kwargs) -> str:
-        """Validate url\n
-
-        Args:\n
-            value (str): url avatar to validate
-
-        Raises:
-            ValueError: if constraint not respected
-
-        Returns:
-            str: validate attribute
-        """
-        value = API_functools.strip_spaces(value.title()).lower()
-        pattern = r"(https?:\/\/(www\.)?|(www\.))([\w\-\_\.]+)(\.[a-z]{2,10})(\/.+)?"
-        result = re.match(
-            pattern,
-            value,
-        )
-        if result is None:
-            raise ValueError(f"{kwargs['field'].name} must be a valid url.")
-        return value
-
-    @classmethod
-    @validator("email")
-    def valid_email(cls: Type[PU], value: str, **kwargs) -> str:
-        """Validate email attribute using validate_email package
-
-        Args:
-            value (str): current email to validate
-
-        Raises:
-            ValueError: if email invalid
-
-        Returns:
-            [str]: email
-        """
-        value = API_functools.strip_spaces(value.title())
-        try:
-            validate_email(value)
-        except EmailNotValidError:
-            raise ValueError(f"{kwargs['field'].name} is not a valid email address.")
-        return value.lower()
 
     class Config:
         schema_extra = {
