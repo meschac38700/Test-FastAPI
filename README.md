@@ -32,7 +32,7 @@ The app running on http://127.0.0.1:8000/
 Note that, you can create a virtual environment
 if you don't want to install requirements in your host machine
 
-For that run the following commands
+For that run the following command *depending on your system*:
 
 ```bash
 python -m venv {venv-name}
@@ -86,14 +86,13 @@ Then create DB `fastapidb`
 CREATE DATABASE fastapidb;
 ```
 
-Then Edit `TORTOISE_ORM` variable in the `settings.py` correctly.
-You will find settings file in `app/api/api_v1` folder
+Then edit correctly `TORTOISE_ORM` variable in the [settings.py](https://github.com/meschac38700/Test-FastAPI/blob/master/app/api/api_v1/settings.py#L5) file.
 
 We are using [Aerich](https://github.com/tortoise/aerich) as database migrations tool.
 Init database by running the following aerich command:
 
 ```bash
-aerich init -t app.api.api_v1.settings.TORTOISE_ORM && aerich init-db
+ aerich init-db
 ```
 
 ## Run the app
@@ -106,7 +105,7 @@ The app running on http://127.0.0.1:8000/
 
 ## Fake Data
 
-To load some fake data, go to http://127.0.0.1:8000/data
+To load some fake data, go to [localhost](http://127.0.0.1:8000/data)
 which will load fake data.
 
 ## Run all the tests
