@@ -21,7 +21,7 @@ build_docker_image:
     DOCKER_TLS_CERTDIR: "/certs"
     IMAGE_NAME: fast-api
   before_script:
-    - cat $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
   script:
     - docker build -t $DOCKER_USER/$IMAGE_NAME:laster .
-    - docker push $DOCKER_USER/$IMAGE_NAME:laster
+    - docker push $DOCKER_USER/$IMAGE_NAME:latest
