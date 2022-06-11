@@ -1,27 +1,30 @@
-FROM python:3.10.4-slim-buster
+FROM python:3.10-alpine
 
 LABEL maintainer="Eliam LOTONGA" email="contact@eliam-lotonga.fr"
 
-EXPOSE 80
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup 
 
-ENV APP_EXPOSED_PORT=80
+ARG workDir=/app/src venv=/app/src/venv
 
-RUN useradd --create-home appuser
+ENV PATH="/home/appuser/.local/bin:${PATH}" APP_SRC=$workDir VENV=$venv
+
+EXPOSE ${APP_PORT:-80}
+
+RUN mkdir -p $workDir && chown -R appuser:appgroup $workDir
+
+WORKDIR $workDir
 
 USER appuser
 
-ENV PATH="/home/appuser/.local/bin:${PATH}"
+COPY --chown=appuser:appgroup ./requirements .
 
-WORKDIR /home/appuser
+RUN python -m venv $venv &&\
+  source $venv/bin/activate &&\
+  pip install --upgrade pip &&\
+  pip install -r ./common.txt
 
-COPY --chown=appuser:appuser ./requirements/common.txt .
+COPY --chown=appuser:appgroup . .
 
-RUN pip install --upgrade pip
+RUN rm -rf common.txt requirements && chmod +x ./entrypoint.sh
 
-RUN pip install --user --no-cache-dir --no-input -r common.txt
-
-COPY --chown=appuser:appuser . .
-
-RUN rm -rf requirements
-
-CMD [ "python", "main.py" ]
+ENTRYPOINT ["./entrypoint.sh"]

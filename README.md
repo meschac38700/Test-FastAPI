@@ -13,9 +13,14 @@
 - [App-1](https://github.com/meschac38700/fastAPI-client-side)
 - [App-2](https://github.com/meschac38700/comment-design)
 
-## Python versions
+## Versions
 
-### >= 3.9
+###### 3.9 <= python <= 3.10.4
+
+---
+> **_NOTE:_** 
+> All database configuration names can be overridden by environment variables see [settings.py](https://github.com/meschac38700/Test-FastAPI/blob/master/app/api/api_v1/settings.py#L5) file
+---
 
 ## Install with docker-compose
 
@@ -25,7 +30,20 @@ Then run:
 docker-compose -f docker-compose.yml up
 ```
 
-The app running on http://127.0.0.1:8000/
+### Mixed install with docker and host machine:
+
+If you have already postgres installed in your host machine then:
+
+Create database `fastapidb`
+```bash 
+create database fastapidb; 
+```
+Run app with docker:
+```bash
+docker run -d --rm --network=host meschac38000/fast-api:latest
+```
+
+The ap running on [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
 ## Manual installation without docker
 

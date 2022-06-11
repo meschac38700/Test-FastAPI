@@ -7,9 +7,11 @@ Dockerfile
 docker-compose.*
 .idea/
 migrations
-aerich.ini
 *coverage*
 *test-*
 !*.coveragerc
 requirements
 !requirements/common.txt
+*.ini
+*.md
+*.toml

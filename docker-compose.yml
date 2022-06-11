@@ -25,6 +25,7 @@ services:
     environment:
       - POSTGRES_HOST=api_db
       - POSTGRES_PORT=5432
+      - APP_PORT=80
     depends_on:
       - api_db
 volumes:
