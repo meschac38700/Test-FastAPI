@@ -1,4 +1,9 @@
+stages:
+  - test
+  - build
+
 run_tests:
+  stage: test
   image: python:3.10-alpine
   before_script:
     - pip install --upgrade pip
@@ -6,3 +11,17 @@ run_tests:
     - pip install -r requirements/dev.txt
   script:
     - pytest
+
+build_docker_image:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    IMAGE_NAME: fast-api
+  before_script:
+    - cat $DOCKER_PASS | docker login $DOCKER_USER --password-stdin
+  script:
+    - docker build -t $DOCKER_USER/$IMAGE_NAME:laster .
+    - docker push $DOCKER_USER/$IMAGE_NAME:laster
