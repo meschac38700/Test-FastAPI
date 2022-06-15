@@ -5,7 +5,7 @@ on:
     branches: [master]
 
 jobs:
-  lint:
+  format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
