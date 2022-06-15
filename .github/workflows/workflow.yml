@@ -1,6 +1,14 @@
-name: Build
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Workflow
 
 on:
+  workflow_run:
+    workflows:
+      - "Auto-format"
+    types:
+      - completed
   pull_request:
     branches: [master]
 
@@ -40,3 +48,19 @@ jobs:
           name: Test-FastAPI
           fail_ci_if_error: true
           verbose: true
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    name: Deploy docker image
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Build & push docker image
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          image: meschac38000/fast-api
+          tags: latest
+          dockerfile: Dockerfile
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
