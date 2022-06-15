@@ -1,4 +1,4 @@
-name: Auto-format
+name: Black
 
 on:
   push:
