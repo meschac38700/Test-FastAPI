@@ -10,16 +10,16 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.10"]
+        version: ["3.9", "3.10"]
 
-    name: Python ${{ matrix.python-version }}
+    name: Python ${{ matrix.version }}
 
     steps:
       - uses: actions/checkout@master
       - name: Set up Python
         uses: actions/setup-python@master
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.version }}
 
       - name: Install dependencies
         run: |
